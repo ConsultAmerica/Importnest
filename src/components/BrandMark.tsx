@@ -6,20 +6,19 @@ const SIZES = {
   md: { fullH: 48, icon: 36 },
   lg: { fullH: 64, icon: 48 },
   xl: { fullH: 96, icon: 72 },
-  /** Footer marketing lockup — tweak via `height` prop or FOOTER_LOGO_HEIGHT */
-  footer: { fullH: 96, icon: 48 },
+  footer: { fullH: 80, icon: 48 },
 } as const;
 
-/** Default footer logo height in px — change here or pass `height` on BrandMark. */
-export const FOOTER_LOGO_HEIGHT = 96;
+/** Default footer logo height in px. */
+export const FOOTER_LOGO_HEIGHT = 80;
 
 export type BrandLogo = "in" | "nest" | "logo9" | "logo1" | "logo2";
 export type BrandLayout = "horizontal" | "stacked" | "header" | "footer";
 
-/** Footer lockup — bags/nest with tagline (white IMPORT for navy footer). */
-const FOOTER_LOCKUP = {
-  src: "/brand/importnest-footer-logo-v10.png",
-  aspect: 3.87,
+/** Icon + IMPORTNEST only — transparent PNG (no black plate / tagline). */
+const WORDMARK_LOCKUP = {
+  src: "/brand/importnest-lockup-wordmark-v3.png",
+  aspect: 3.145,
 } as const;
 
 /**
@@ -108,7 +107,7 @@ const ASSETS = {
   },
 } as const;
 
-/** Importnest brand mark — header uses compact lockup; full tagline for marketing surfaces. */
+/** Importnest brand mark — header/footer chrome use BrandLink (wordmark only). */
 export function BrandMark({
   logo = "logo9",
   showWordmark = true,
@@ -119,14 +118,11 @@ export function BrandMark({
   className = "",
 }: {
   logo?: BrandLogo;
-  /** @deprecated kept for call-site compat */
   variant?: "onDark" | "onLight";
   showWordmark?: boolean;
   size?: keyof typeof SIZES;
-  /** Pixel height override — takes precedence over `size` for adjustable placement */
   height?: number;
   onDark?: boolean;
-  /** header = compact bags lockup; footer = i+nest lockup; horizontal/stacked = full */
   layout?: BrandLayout;
   className?: string;
 }) {
@@ -137,17 +133,9 @@ export function BrandMark({
   if (showWordmark) {
     let src: string;
     let aspect: number;
-    if (layout === "footer") {
-      src = FOOTER_LOCKUP.src;
-      aspect = FOOTER_LOCKUP.aspect;
-    } else if (layout === "header") {
-      if (onDark && "headerDark" in asset) {
-        src = asset.headerDark;
-        aspect = asset.headerDarkAspect;
-      } else {
-        src = asset.header;
-        aspect = asset.headerAspect;
-      }
+    if (layout === "footer" || layout === "header") {
+      src = WORDMARK_LOCKUP.src;
+      aspect = WORDMARK_LOCKUP.aspect;
     } else if (onDark && "horizontalOnDark" in asset) {
       src = asset.horizontalOnDark;
       aspect =
@@ -202,27 +190,28 @@ export function BrandMark({
   );
 }
 
-/** Header home link — same full lockup as the footer (sized for the navy bar). */
-export const HEADER_LOGO_HEIGHT = 68;
+/** Header logo height — larger wordmark, no subtitle. */
+export const HEADER_LOGO_HEIGHT = 72;
 
 /**
- * Header home link — uses the footer brand lockup on navy.
- * Pass `onDark` for navy surfaces (kept for call-site compat).
+ * Header/footer home link — wordmark only (no tagline under the logo).
  */
 export function BrandLink({
   className = "",
   logo = "logo9",
   onDark = false,
+  size = "header",
 }: {
   variant?: "onDark" | "onLight";
   className?: string;
   onDark?: boolean;
   logo?: BrandLogo;
+  size?: "header" | "footer";
 }) {
   void logo;
   void onDark;
-  const height = HEADER_LOGO_HEIGHT;
-  const width = Math.round(height * FOOTER_LOCKUP.aspect);
+  const height = size === "footer" ? FOOTER_LOGO_HEIGHT : HEADER_LOGO_HEIGHT;
+  const width = Math.round(height * WORDMARK_LOCKUP.aspect);
 
   return (
     <Link
@@ -231,14 +220,14 @@ export function BrandLink({
       aria-label="Importnest home"
     >
       <Image
-        src={FOOTER_LOCKUP.src}
+        src={WORDMARK_LOCKUP.src}
         alt="Importnest"
         width={width}
         height={height}
         className="header-logo-img"
         priority
         quality={100}
-        style={{ height: "auto", width: "auto", maxHeight: height }}
+        style={{ background: "transparent" }}
       />
     </Link>
   );

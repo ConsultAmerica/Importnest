@@ -1,9 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-  <!-- Wayfair purple + stylized W -->
-  <rect width="48" height="48" rx="10" fill="#7B2D8E"/>
-  <path
-    d="M8.5 14.5 15.2 34h5.1l3.7-12.4 3.7 12.4h5.1l6.7-19.5h-5.2l-3.7 12.2-3.7-12.2h-4.4l-3.7 12.2-3.7-12.2H8.5z"
-    fill="#FFFFFF"
-  />
-  <path d="M16 37.5h16" stroke="#F5A623" stroke-width="2.4" stroke-linecap="round"/>
+  <rect width="48" height="48" rx="14" fill="#7B189A"/>
+  <path d="M9 15.2 15.4 33.6h4.6l4-11.6 4 11.6h4.6L37 15.2h-4.8l-3.4 11.2-3.4-11.2h-4.8l-3.4 11.2-3.4-11.2H9Z" fill="#FFFFFF"/>
+  <path d="M15 37.4h18" stroke="#F5A623" stroke-width="2.4" stroke-linecap="round"/>
 </svg>

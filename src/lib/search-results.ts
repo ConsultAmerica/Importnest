@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { minutesSince } from "@/lib/compare-view";
+import { minutesSince, knownOfferTotal, hasDisclosedShipping, isSafeRetailerUrl } from "@/lib/compare-view";
 import { categoryFacetProfile } from "@/lib/category-facets";
 import { getProductDisplayImage } from "@/lib/product-images";
 import type { SearchIntent } from "@/lib/search-intent";
@@ -69,6 +69,27 @@ export type SearchResultProduct = {
   /** Color / finish attribute values when present on the product. */
   colors: string[];
   sourceIds: string[];
+  /** Approved retailer names behind the offers, lowest total first. */
+  sourceNames: string[];
+  /** One lowest Total Known Cost line per retailer. Real listings only. */
+  offerBreakdown: {
+    sourceName: string;
+    sourceId: string;
+    /** Listing behind this retailer's lowest total — set only when it has a safe retailer URL, so the card can link straight to it via /go. */
+    listingId?: string;
+    total: number;
+    price: number;
+    shipping: number | null;
+    fees: number;
+    /** Listing's delivery label mentions pickup. */
+    pickup: boolean;
+  }[];
+  /** Prior tracked Total Known Cost when PriceHistory has an earlier day. */
+  previousTotalCost: number | null;
+  /** Whole-percent drop vs previousTotalCost. Null when history does not show a drop. */
+  priceDropPercent: number | null;
+  /** True when the current total is the lowest saved daily total and history has 2+ days. */
+  isHistoricalLow: boolean;
   isSaved: boolean;
   /** Set when a text query is present */
   matchKind: MatchKind | null;
@@ -79,7 +100,7 @@ export type SearchResultProduct = {
     sourceName: string;
     condition: string;
     price: number;
-    shipping: number;
+    shipping: number | null;
     fees: number;
   } | null;
 };
@@ -218,9 +239,10 @@ type ListingRow = {
   sourceId: string;
   condition: string;
   price: number;
-  shipping: number;
+  shipping: number | null;
   fees: number;
   deliveryLabel: string | null;
+  url: string | null;
   freshnessCapturedAt: Date;
   source: { name: string };
 };
@@ -234,6 +256,8 @@ type ProductAgg = {
   conditions: Set<string>;
   sourceIds: Set<string>;
   bestListing: NonNullable<SearchResultProduct["bestListing"]>;
+  /** Lowest Total Known Cost listing per retailer name. */
+  bySource: Map<string, SearchResultProduct["offerBreakdown"][number]>;
 };
 
 function buildAggs(listings: ListingRow[]): Map<string, ProductAgg> {
@@ -241,9 +265,9 @@ function buildAggs(listings: ListingRow[]): Map<string, ProductAgg> {
   for (const l of listings) {
     const id = l.canonicalProductId;
     if (!id) continue;
-    const total = l.price + l.shipping + l.fees;
+    const total = knownOfferTotal(l.price, l.shipping, l.fees);
     const pickup = listingHasPickup(l.deliveryLabel);
-    const freeShip = l.shipping <= 0.009;
+    const freeShip = hasDisclosedShipping(l.shipping) && l.shipping <= 0.009;
     const bestListing: ProductAgg["bestListing"] = {
       listingId: l.id,
       sourceName: l.source.name,
@@ -263,6 +287,21 @@ function buildAggs(listings: ListingRow[]): Map<string, ProductAgg> {
         conditions: new Set([l.condition]),
         sourceIds: new Set([l.sourceId]),
         bestListing,
+        bySource: new Map([
+          [
+            l.source.name,
+            {
+              sourceName: l.source.name,
+              sourceId: l.sourceId,
+              listingId: isSafeRetailerUrl(l.url) ? l.id : undefined,
+              total,
+              price: l.price,
+              shipping: l.shipping,
+              fees: l.fees,
+              pickup,
+            },
+          ],
+        ]),
       });
       continue;
     }
@@ -276,6 +315,19 @@ function buildAggs(listings: ListingRow[]): Map<string, ProductAgg> {
     existing.hasFreeShipping = existing.hasFreeShipping || freeShip;
     existing.conditions.add(l.condition);
     existing.sourceIds.add(l.sourceId);
+    const prior = existing.bySource.get(l.source.name);
+    if (!prior || total < prior.total) {
+      existing.bySource.set(l.source.name, {
+        sourceName: l.source.name,
+        sourceId: l.sourceId,
+        listingId: isSafeRetailerUrl(l.url) ? l.id : undefined,
+        total,
+        price: l.price,
+        shipping: l.shipping,
+        fees: l.fees,
+        pickup,
+      });
+    }
   }
   return byProduct;
 }
@@ -293,6 +345,56 @@ function scoreBestValue(p: SearchResultProduct): number {
   if (p.lowestTotalCost == null || p.offerCount === 0) return -1;
   // More competing offers at a given price → stronger "value" signal from real data only.
   return p.offerCount / (1 + p.lowestTotalCost / 200);
+}
+
+async function attachPriceSignals(rows: SearchResultProduct[], listings: ListingRow[]) {
+  const wanted = new Set(rows.map((row) => row.id));
+  const relevant = listings.filter(
+    (listing) => listing.canonicalProductId && wanted.has(listing.canonicalProductId),
+  );
+  if (relevant.length === 0) return;
+
+  const history = await prisma.priceHistory.findMany({
+    where: { listingId: { in: relevant.map((listing) => listing.id) } },
+    select: { listingId: true, price: true, shipping: true, capturedAt: true },
+    orderBy: { capturedAt: "asc" },
+  });
+  const listingToProduct = new Map(
+    relevant
+      .filter((listing) => listing.canonicalProductId)
+      .map((listing) => [listing.id, listing.canonicalProductId!]),
+  );
+  const byDay = new Map<string, Map<string, number>>();
+  for (const point of history) {
+    if (!hasDisclosedShipping(point.shipping)) continue;
+    const productId = listingToProduct.get(point.listingId);
+    if (!productId) continue;
+    const day = point.capturedAt.toISOString().slice(0, 10);
+    const total = point.price + point.shipping;
+    let days = byDay.get(productId);
+    if (!days) {
+      days = new Map();
+      byDay.set(productId, days);
+    }
+    const existing = days.get(day);
+    if (existing == null || total < existing) days.set(day, total);
+  }
+
+  for (const row of rows) {
+    const listing = row.bestListing;
+    if (!listing || !hasDisclosedShipping(listing.shipping)) continue;
+    const days = byDay.get(row.id);
+    if (!days || days.size < 2) continue;
+    const ordered = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const trackedNow = listing.price + listing.shipping;
+    const lowest = Math.min(...ordered.map(([, total]) => total));
+    const previous = ordered[ordered.length - 2]?.[1];
+    if (previous != null && previous > trackedNow + 0.009) {
+      row.previousTotalCost = previous;
+      row.priceDropPercent = Math.round(((previous - trackedNow) / previous) * 100);
+    }
+    row.isHistoricalLow = trackedNow <= lowest + 0.009;
+  }
 }
 
 /**
@@ -345,7 +447,11 @@ async function getSearchResultsUnsafe(
                 { modelName: { contains: w, mode: "insensitive" as const } },
                 { modelNumber: { contains: w, mode: "insensitive" as const } },
                 { brand: { name: { contains: w, mode: "insensitive" as const } } },
-                { category: { name: { contains: w, mode: "insensitive" as const } } },
+                // Category is already applied above. Matching its name again
+                // would return every product in the department.
+                ...(filters.categorySlug
+                  ? []
+                  : [{ category: { name: { contains: w, mode: "insensitive" as const } } }]),
               ]),
             }
           : {},
@@ -373,6 +479,7 @@ async function getSearchResultsUnsafe(
       shipping: true,
       fees: true,
       deliveryLabel: true,
+      url: true,
       freshnessCapturedAt: true,
       source: { select: { name: true } },
     },
@@ -388,7 +495,7 @@ async function getSearchResultsUnsafe(
   const displayListings = offerFilterActive
     ? listings.filter((l) => {
         if (!listingMatchesOfferFilters(l, filters)) return false;
-        if (filters.freeShippingOnly && l.shipping > 0.009) return false;
+        if (filters.freeShippingOnly && (!hasDisclosedShipping(l.shipping) || l.shipping > 0.009)) return false;
         return true;
       })
     : listings;
@@ -431,6 +538,15 @@ async function getSearchResultsUnsafe(
       allAttributes,
       colors,
       sourceIds: facetAgg ? [...facetAgg.sourceIds] : [],
+      sourceNames: agg
+        ? [...agg.bySource.values()].sort((a, b) => a.total - b.total).map((o) => o.sourceName)
+        : [],
+      offerBreakdown: agg
+        ? [...agg.bySource.values()].sort((a, b) => a.total - b.total)
+        : [],
+      previousTotalCost: null,
+      priceDropPercent: null,
+      isHistoricalLow: false,
       bestListing: agg?.bestListing ?? null,
       isSaved: saved.has(p.id),
       matchKind: classifyMatchKind({
@@ -476,6 +592,11 @@ async function getSearchResultsUnsafe(
       allAttributes,
       colors,
       sourceIds: facetAgg ? [...facetAgg.sourceIds] : [],
+      sourceNames: [],
+      offerBreakdown: [],
+      previousTotalCost: null,
+      priceDropPercent: null,
+      isHistoricalLow: false,
       bestListing: null,
       isSaved: saved.has(p.id),
       matchKind: null as SearchResultProduct["matchKind"],
@@ -593,6 +714,8 @@ async function getSearchResultsUnsafe(
         return scoreBestOverall(b) - scoreBestOverall(a);
     }
   });
+
+  await attachPriceSignals(rows, listings);
 
   // Facet counts from products matching query/category before facet click-narrowing
   // (simpler & honest: count within currently returned filtered set after availability gate)

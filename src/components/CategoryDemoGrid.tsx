@@ -10,6 +10,22 @@ import {
 } from "@/data/category-demo-products";
 import { ProductImage } from "@/components/ProductImage";
 
+const BROWSE_ALIASES: Record<string, string[]> = {
+  "smart home": ["table lamp", "diffuser", "organizer"],
+  furniture: ["throw pillows", "rug", "blanket"],
+  lighting: ["table lamp"],
+  tools: ["organizer", "storage bins"],
+};
+
+function browseMatches(query: string, subtype: string) {
+  const q = query.trim().toLowerCase();
+  const s = subtype.trim().toLowerCase();
+  if (!q) return true;
+  const aliases = BROWSE_ALIASES[q];
+  if (aliases) return aliases.some((alias) => s === alias || s.includes(alias));
+  return s === q || s.includes(q) || q.includes(s);
+}
+
 /**
  * Image-rich discovery tiles for category browsing — distinct subtype photos.
  * Not live listings: no invented prices/offers.
@@ -32,6 +48,9 @@ export function CategoryDemoGrid({
   const products = getCategoryDemoProducts(categorySlug).filter(
     (p) => normalizeCategoryKey(p.categorySlug) === key,
   );
+  const visible = activeSubtype
+    ? products.filter((p) => browseMatches(activeSubtype, p.subtype))
+    : products;
   if (products.length === 0) return null;
 
   const title = categoryDisplayTitle(categorySlug);
@@ -40,15 +59,20 @@ export function CategoryDemoGrid({
   const headingId = prominence === "primary" ? "category-browse-heading" : "category-demo-heading";
   const imageBySubtype = new Map(products.map((p) => [p.subtype.toLowerCase(), p.image]));
   const isBeauty = key === "beauty";
+  const filteredTitle =
+    activeSubtype && visible.length > 0
+      ? activeSubtype.replace(/\b\w/g, (c) => c.toUpperCase())
+      : null;
   const sectionTitle =
     prominence === "primary"
-      ? isBeauty
-        ? "Explore Beauty Devices"
-        : `Explore ${title}`
+      ? filteredTitle ?? (isBeauty ? "Explore Beauty Devices" : `Explore ${title}`)
       : `More to explore in ${title}`;
-  const sectionSubtitle = isBeauty
-    ? "10 beauty and personal-care device types with distinct photos — browse ideas, then compare live offers when available."
-    : `${products.length} ${title} product types with distinct photos — browse ideas, then compare live offers when available.`;
+  const sectionSubtitle =
+    visible.length > 0 && visible.length !== products.length
+      ? `${visible.length} matching browse idea${visible.length === 1 ? "" : "s"} in ${title}. Live offers appear here when an approved source has this type.`
+      : isBeauty
+        ? "10 beauty and personal-care device types with distinct photos — browse ideas, then compare live offers when available."
+        : `${products.length} ${title} product types with distinct photos — browse ideas, then compare live offers when available.`;
 
   return (
     <section className={prominence === "primary" ? "mt-2" : "mt-8"} aria-labelledby={headingId}>
@@ -57,7 +81,11 @@ export function CategoryDemoGrid({
           <h2 id={headingId} className="text-lg font-bold tracking-tight text-navy-900 sm:text-xl">
             {sectionTitle}
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted">{sectionSubtitle}</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            {visible.length === 0
+              ? "No browse ideas match this type. Choose All to see the full department."
+              : sectionSubtitle}
+          </p>
         </div>
         <Link href={browseHref} className="text-sm font-semibold text-link hover:underline">
           View all {title}
@@ -95,14 +123,14 @@ export function CategoryDemoGrid({
         </ul>
       ) : null}
 
-      <ul className="section-grid mt-4">
-        {products.map((product) => (
+      <ul className="mt-4 grid w-full grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        {visible.map((product) => (
           <li key={product.id} className="min-w-0">
             <Link
               href={`/search/results?q=${encodeURIComponent(product.subtype)}&category=${encodeURIComponent(categorySlug)}`}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-panel shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-accent/45"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-dashed border-accent/40 bg-panel shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-accent"
             >
-              <div className="relative mx-2 mt-2 overflow-hidden rounded-[14px] bg-[#F7FAFC]">
+              <div className="product-photo-well relative overflow-hidden border-b border-border bg-white">
                 <ProductImage
                   src={product.image}
                   category={product.categorySlug}
@@ -128,6 +156,8 @@ export function CategoryDemoGrid({
                 </p>
                 <p className="mt-0.5 text-xs capitalize text-accent">{product.subtype}</p>
                 <p className="mt-auto line-clamp-2 text-xs text-muted">{product.subtitle}</p>
+                {/* Demo data: never let a browse idea pass for a live, priced offer. */}
+                <p className="demo-card-note">Browse idea · no live price yet →</p>
               </div>
             </Link>
           </li>

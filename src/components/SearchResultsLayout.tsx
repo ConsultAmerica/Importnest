@@ -1,5 +1,5 @@
 import { ProductCard, type ProductCardBadge } from "@/components/ProductCard";
-import { SearchFiltersFields } from "@/components/SearchFiltersFields";
+import { DepartmentBrowse, SearchFiltersFields } from "@/components/SearchFiltersFields";
 import { normalizeCategorySlug } from "@/lib/category-visuals";
 import {
   conditionBadgeLabels,
@@ -58,7 +58,11 @@ const HIGHLIGHT_LABELS: Record<ResultHighlight, string> = {
   fastest: "Fastest available",
 };
 
-function searchResultBadge(product: SearchResultProduct): ProductCardBadge | null {
+function searchResultBadge(product: SearchResultProduct): ProductCardBadge | string | null {
+  if (product.priceDropPercent != null && product.priceDropPercent > 0) {
+    return `${product.priceDropPercent}% price drop`;
+  }
+  if (product.isHistoricalLow) return "Lowest tracked";
   if (product.highlights.includes("lowest_cost")) return "Best deal";
   if (product.highlights.includes("best_value")) return "Top product";
   if (product.offerCount >= 3) return "Popular";
@@ -133,13 +137,18 @@ export function SearchFiltersSidebar({
   resultCount?: number;
 }) {
   return (
-    <aside className="hidden w-72 shrink-0 lg:block">
-      <SearchFiltersForm
-        params={params}
-        facets={facets}
-        resultCount={resultCount}
-        className="panel sticky top-20 max-h-[calc(100vh-6rem)] space-y-5 overflow-y-auto p-4"
-      />
+    <aside className="hidden min-w-0 w-full lg:flex lg:flex-col">
+      <div className="panel flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1">
+          <DepartmentBrowse params={params} />
+          <SearchFiltersForm
+            params={params}
+            facets={facets}
+            resultCount={resultCount}
+            className="space-y-5"
+          />
+        </div>
+      </div>
     </aside>
   );
 }
@@ -180,12 +189,14 @@ export function SearchResultProductCard({
   redirectTo,
   layout = "grid",
   vehicle,
+  alertActive = false,
 }: {
   product: SearchResultProduct;
   signedIn: boolean;
   redirectTo: string;
   layout?: "grid" | "list";
   vehicle?: { year?: string; make?: string; model?: string };
+  alertActive?: boolean;
 }) {
   const conditions = conditionBadgeLabels(product.conditions);
   const extraBadges: string[] = [];
@@ -217,12 +228,16 @@ export function SearchResultProductCard({
     rating: product.rating,
     ratingCount: product.ratingCount,
     fromPrice: product.lowestTotalCost,
+    previousPrice: product.previousTotalCost,
     offerCount: product.offerCount,
     sourceCount: product.sourceIds.length,
+    sourceNames: product.sourceNames,
+    offerBreakdown: product.offerBreakdown,
     freshnessMinutesAgo: product.freshnessMinutesAgo,
     categorySlug: product.categorySlug,
     bestListing: product.bestListing,
     isSaved: product.isSaved,
+    alertActive,
     signedIn,
     redirectTo,
     extraBadges,
@@ -231,6 +246,11 @@ export function SearchResultProductCard({
     compactList: layout === "list",
     colorSwatches: product.colors,
     intentBadges: categoryIntentBadges(product, vehicle),
+    dealReason: product.priceDropPercent
+      ? `${product.priceDropPercent}% below the last tracked item + shipping`
+      : product.isHistoricalLow
+        ? "Lowest tracked item + shipping in saved history"
+        : null,
   };
 
   return <ProductCard {...shared} />;

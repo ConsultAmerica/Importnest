@@ -30,9 +30,11 @@ describe("OfferActions — View retailer offer", () => {
     const html = renderToStaticMarkup(
       <OfferActions product={makeProduct()} listing={makeListing({ url: "https://example.com/offer" })} />,
     );
-    expect(html).toContain("View retailer offer");
+    expect(html).toContain("View offer on");
     expect(html).toContain('href="/go/listing-1"');
     expect(html).toContain('target="_blank"');
+    // Hand-off expectation: checkout happens on the retailer's site.
+    expect(html).toContain("finish checkout on");
     expect(html).toMatch(/rel="[^"]*noopener[^"]*"/);
     expect(html).toMatch(/rel="[^"]*noreferrer[^"]*"/);
   });
@@ -41,7 +43,7 @@ describe("OfferActions — View retailer offer", () => {
     const html = renderToStaticMarkup(
       <OfferActions product={makeProduct()} listing={makeListing({ url: undefined })} />,
     );
-    expect(html).not.toContain("View retailer offer");
+    expect(html).not.toContain("View offer on");
   });
 
   it("hides it when the caller explicitly says canViewRetailerOffer is false even if a url is present", () => {
@@ -52,7 +54,7 @@ describe("OfferActions — View retailer offer", () => {
         canViewRetailerOffer={false}
       />,
     );
-    expect(html).not.toContain("View retailer offer");
+    expect(html).not.toContain("View offer on");
   });
 
   it("never emits a bare '#' href anywhere in the action row", () => {
@@ -66,14 +68,14 @@ describe("OfferActions — View retailer offer", () => {
 describe("OfferActions — Add this offer to cart", () => {
   it("renders the offer-level cart button by default, keyed to this exact listing", () => {
     const html = renderToStaticMarkup(<OfferActions product={makeProduct()} listing={makeListing()} />);
-    expect(html).toContain("Add this offer to cart");
+    expect(html).toContain("Save offer for later");
   });
 
   it("hides Add this offer to cart when canAddToCart is false (e.g. missing listing id or price upstream)", () => {
     const html = renderToStaticMarkup(
       <OfferActions product={makeProduct()} listing={makeListing()} canAddToCart={false} />,
     );
-    expect(html).not.toContain("Add this offer to cart");
+    expect(html).not.toContain("Save offer for later");
   });
 });
 

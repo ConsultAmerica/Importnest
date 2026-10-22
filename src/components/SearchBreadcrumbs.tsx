@@ -1,7 +1,14 @@
 import Link from "next/link";
-import { categoryDisplayTitle } from "@/lib/category-visuals";
+import {
+  breadcrumbCategoryLabel,
+  breadcrumbSubtypeLabel,
+  dedupeBreadcrumbParts,
+  siteRootBreadcrumb,
+  type BreadcrumbPart,
+} from "@/lib/breadcrumbs";
+import { normalizeCategorySlug } from "@/lib/category-visuals";
 
-/** Home › Category › Query trail for search results. */
+/** Home/Shop › Category › [Subtype] › Query trail for search results. */
 export function SearchBreadcrumbs({
   category,
   query,
@@ -9,28 +16,40 @@ export function SearchBreadcrumbs({
   category?: string | null;
   query?: string | null;
 }) {
-  const parts: { label: string; href?: string }[] = [{ label: "Home", href: "/" }];
+  const slug = normalizeCategorySlug(category);
+  const parts: BreadcrumbPart[] = [];
 
-  if (category) {
+  if (slug) {
+    const catLabel = breadcrumbCategoryLabel(slug);
+    parts.push(siteRootBreadcrumb(catLabel));
     parts.push({
-      label: categoryDisplayTitle(category),
-      href: `/search/results?category=${encodeURIComponent(category)}`,
+      label: catLabel,
+      href: `/search/results?category=${encodeURIComponent(slug)}`,
     });
+    const subtype = breadcrumbSubtypeLabel(slug, query);
+    if (subtype && (!query || subtype.label.toLowerCase() !== query.trim().toLowerCase())) {
+      parts.push(subtype);
+    }
+    if (query?.trim() && (!subtype || subtype.label.toLowerCase() !== query.trim().toLowerCase())) {
+      parts.push({ label: query.trim() });
+    }
   } else {
+    parts.push({ label: "Home", href: "/" });
     parts.push({ label: "Search results", href: "/search/results" });
+    if (query?.trim()) {
+      parts.push({ label: query.trim() });
+    }
   }
 
-  if (query?.trim()) {
-    parts.push({ label: query.trim() });
-  }
+  const trail = dedupeBreadcrumbParts(parts);
 
   return (
     <nav aria-label="Breadcrumb" className="text-xs text-muted">
       <ol className="flex flex-wrap items-center gap-1.5">
-        {parts.map((part, i) => (
+        {trail.map((part, i) => (
           <li key={`${part.label}-${i}`} className="inline-flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden="true">›</span> : null}
-            {part.href && i < parts.length - 1 ? (
+            {part.href && i < trail.length - 1 ? (
               <Link href={part.href} className="font-semibold text-link hover:underline">
                 {part.label}
               </Link>

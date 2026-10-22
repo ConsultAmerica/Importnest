@@ -8,23 +8,20 @@ export function PageShell({
   hideHeaderSearch = false,
 }: {
   children: ReactNode;
-  width?: "default" | "narrow" | "wide";
+  width?: "default" | "narrow" | "wide" | "results";
   hideHeaderSearch?: boolean;
 }) {
+  const mainClass =
+    width === "narrow"
+      ? "mx-auto w-full min-w-0 max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
+      : width === "results"
+        ? "page-container page-container-results mx-auto w-full min-w-0 flex-1 py-6 sm:py-8"
+        : "page-container mx-auto w-full min-w-0 flex-1 py-8";
+
   return (
     <div className="page-shell flex min-h-screen flex-col text-foreground">
       <Header hideSearch={hideHeaderSearch} />
-      <main
-        className={
-          width === "narrow"
-            ? "mx-auto w-full min-w-0 max-w-3xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
-            : width === "wide"
-              ? "page-container mx-auto w-full min-w-0 flex-1 py-8"
-              : "page-container mx-auto w-full min-w-0 flex-1 py-8"
-        }
-      >
-        {children}
-      </main>
+      <main className={mainClass}>{children}</main>
       <Footer />
     </div>
   );

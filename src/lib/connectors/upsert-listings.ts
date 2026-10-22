@@ -41,7 +41,7 @@ export async function upsertConnectorListings(result: ConnectorResult) {
       canonicalProductId,
       condition: item.condition,
       price: item.price,
-      shipping: item.shipping ?? 0,
+      shipping: item.shipping ?? null,
       fees: item.fees ?? 0,
       deliveryLabel: item.deliveryLabel,
       freshnessCapturedAt: result.fetchedAt,
@@ -55,7 +55,7 @@ export async function upsertConnectorListings(result: ConnectorResult) {
       data: {
         listingId: listing.id,
         price: item.price,
-        shipping: item.shipping ?? 0,
+        shipping: item.shipping ?? null,
         capturedAt: result.fetchedAt,
       },
     });

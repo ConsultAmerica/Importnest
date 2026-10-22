@@ -11,6 +11,7 @@ import {
   hasStructuredProtectionData,
   isSafeRetailerUrl,
   minutesSince,
+  missingInformationForListing,
   rankingFactorsForListing,
   sortCompareRows,
   totalKnownCost,
@@ -33,6 +34,7 @@ export {
 export {
   FALLBACK_COPY,
   totalKnownCost,
+  formatTotalKnownCost,
   sortCompareRows,
   minutesSince,
   isSafeRetailerUrl,
@@ -49,7 +51,7 @@ type ListingRecord = {
   sourceId: string;
   condition: string;
   price: number;
-  shipping: number;
+  shipping: number | null;
   fees: number;
   deliveryLabel: string | null;
   sellerName: string | null;
@@ -157,21 +159,7 @@ function computeRecommendations(
     const cost = totalKnownCost(listing);
     const bestCost = ranked[0] ? totalKnownCost(ranked[0]) : cost;
     const costDelta = cost - bestCost;
-    const missingInformation = [
-      ...(listing.warrantyLabel === FALLBACK_COPY.warranty
-        ? ["Warranty details not provided by this source"]
-        : []),
-      ...(listing.returnPolicyLabel === FALLBACK_COPY.returns
-        ? ["Return period not provided by this source"]
-        : []),
-      ...(listing.deliveryLabel === FALLBACK_COPY.delivery
-        ? ["Delivery estimate not available"]
-        : []),
-      ...(listing.availabilityLabel === FALLBACK_COPY.availability
-        ? ["Stock status not confirmed"]
-        : []),
-      ...(!listing.url ? ["Direct retailer link not available"] : []),
-    ];
+    const missingInformation = missingInformationForListing(listing);
 
     map.set(listing.id, {
       listingId: listing.id,
@@ -200,10 +188,13 @@ function computeRecommendations(
 export function listingCompleteness(listing: CompareListingView): number {
   const checks = [
     listing.sourceName !== FALLBACK_COPY.retailer,
+    listing.condition !== FALLBACK_COPY.condition,
     listing.deliveryLabel !== FALLBACK_COPY.delivery,
+    listing.availabilityLabel !== FALLBACK_COPY.availability,
     listing.warrantyLabel !== FALLBACK_COPY.warranty,
     listing.returnPolicyLabel !== FALLBACK_COPY.returns,
     Boolean(listing.url),
+    listing.shipping != null,
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }

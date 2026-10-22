@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { FALLBACK_COPY, getCompareProduct, getCompareRows } from "@/lib/compare-data";
+import { FALLBACK_COPY, getCompareProduct, getCompareRows, totalKnownCost } from "@/lib/compare-data";
 import { NEUTRAL_RECOMMENDATION_LABEL } from "@/lib/compare-view";
 import { isFreshnessStale } from "@/lib/freshness";
 
@@ -85,7 +85,7 @@ describe.skipIf(!productExists)("live-synced product comparison (no seeded displ
     expect(filtered.length).toBeGreaterThan(0);
     expect(filtered.length).toBeLessThan(unfiltered.length);
     for (const { listing } of filtered) {
-      expect(listing.price + listing.shipping + listing.mandatoryFees).toBeLessThanOrEqual(100);
+      expect(totalKnownCost(listing)).toBeLessThanOrEqual(100);
     }
     // The cheapest listing among the filtered set is still ranked #1.
     expect(filtered.find((r) => r.recommendation.rank === 1)).toBeDefined();

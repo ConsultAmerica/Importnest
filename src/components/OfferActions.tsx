@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { RefreshPricesButton } from "@/components/RefreshPricesButton";
-import { formatConditionLabel } from "@/lib/compare-view";
+import { formatConditionLabel, hasDisclosedShipping, totalKnownCost } from "@/lib/compare-view";
 import type { RankingFactor } from "@/lib/compare-view";
 
 export type OfferActionsProduct = {
@@ -19,7 +19,7 @@ export type OfferActionsListing = {
   sourceName: string;
   condition: string;
   price: number;
-  shipping: number;
+  shipping: number | null;
   fees: number;
   /** Present only when the retailer URL passed `isSafeRetailerUrl`. */
   url?: string;
@@ -70,7 +70,13 @@ export function OfferActions({
   onExplain?: () => void;
 }) {
   const hasRetailerLink = Boolean(listing.url) && (canViewRetailerOffer ?? true);
-  const total = listing.price + listing.shipping + listing.fees;
+  const shippingDisclosed = hasDisclosedShipping(listing.shipping);
+  const total = totalKnownCost({
+    price: listing.price,
+    verifiedDiscount: 0,
+    shipping: listing.shipping,
+    mandatoryFees: listing.fees,
+  });
   const positiveFactors = explanation?.factors.filter((f) => f.positive).slice(0, 3) ?? [];
 
   return (
@@ -123,17 +129,28 @@ export function OfferActions({
           target="_blank"
           rel="noopener noreferrer sponsored"
           onClick={onViewRetailerOffer}
-          className="btn-cta min-h-11 px-4 py-2 text-center text-sm"
+          className="btn-cta inline-flex min-h-11 items-center gap-1.5 px-4 py-2 text-center text-sm"
         >
-          View retailer offer
+          View offer on {listing.sourceName}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+          </svg>
+          <span className="sr-only">(opens the retailer’s site in a new tab)</span>
         </a>
+      ) : null}
+
+      {hasRetailerLink ? (
+        // Set expectations before the hand-off: this leaves Importnest.
+        <p className="basis-full text-xs text-muted">
+          You’ll finish checkout on {listing.sourceName}’s site — Importnest never takes payment.
+        </p>
       ) : null}
 
       {canAddToCart ? (
         <AddToCartButton
-          label="Add this offer to cart"
-          addAriaLabel={`Add ${listing.sourceName} offer for ${product.productName} to cart`}
-          removeAriaLabel={`Remove ${listing.sourceName} offer for ${product.productName} from cart`}
+          label="Save offer for later"
+          addAriaLabel={`Save ${listing.sourceName} offer for ${product.productName} to compare cart`}
+          removeAriaLabel={`Remove ${listing.sourceName} offer for ${product.productName} from compare cart`}
           listingId={listing.id}
           productId={product.productId}
           title={product.productName}
@@ -142,9 +159,9 @@ export function OfferActions({
           retailerName={listing.sourceName}
           condition={formatConditionLabel(listing.condition)}
           itemPrice={listing.price}
-          shipping={listing.shipping}
+          shipping={hasDisclosedShipping(listing.shipping) ? listing.shipping : undefined}
           fees={listing.fees}
-          totalKnownCost={total}
+          totalKnownCost={shippingDisclosed ? total : undefined}
           onAdded={onAddToCart}
         />
       ) : null}

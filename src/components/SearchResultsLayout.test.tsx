@@ -24,6 +24,11 @@ function makeProduct(overrides: Partial<SearchResultProduct> = {}): SearchResult
     allAttributes: [],
     colors: [],
     sourceIds: ["src-1"],
+    sourceNames: ["Local Electronics"],
+    offerBreakdown: [],
+    previousTotalCost: null,
+    priceDropPercent: null,
+    isHistoricalLow: false,
     isSaved: false,
     matchKind: "exact",
     highlights: [],
@@ -102,9 +107,9 @@ describe("SearchResultProductCard — Add to Cart visibility", () => {
         redirectTo="/search/results?category=electronics"
       />,
     );
-    // Compare/Cart are icon-only buttons on the card — assert via aria-label, not visible text.
+    // Labels sit with the icons so the actions stay clear on a phone.
     expect(html).toContain('aria-label="Add Apex Quiet Dishwasher to cart"');
-    expect(html).toContain("Save");
+    expect(html).toContain("Track");
     expect(html).toContain('aria-label="Add Apex Quiet Dishwasher to compare"');
   });
 
@@ -136,7 +141,7 @@ describe("SearchResultProductCard — Add to Cart visibility", () => {
       />,
     );
     expect(html).not.toContain("to cart");
-    expect(html).toContain("Save");
+    expect(html).toContain("Track");
     expect(html).toContain('aria-label="Add Apex Quiet Dishwasher to compare"');
   });
 });

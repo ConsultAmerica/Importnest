@@ -31,7 +31,7 @@ export function RelatedCategoryChips({
       >
         Related categories
       </h2>
-      <ul className="mt-3 flex gap-2.5 overflow-x-auto pb-1">
+      <ul className="mt-3 grid w-full grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6">
         {related.map((slug) => {
           const params = new URLSearchParams({ category: slug });
           if (query?.trim()) params.set("q", query.trim());
@@ -40,19 +40,19 @@ export function RelatedCategoryChips({
           const src = categoryImageSrc(slug);
 
           return (
-            <li key={slug} className="min-w-0 shrink-0">
+            <li key={slug} className="min-w-0">
               <Link
                 href={href}
-                className="flex w-[6.5rem] flex-col items-center gap-1.5 rounded-xl border border-border bg-panel p-2 text-center shadow-[var(--shadow-panel)] transition hover:border-accent/45 hover:shadow-md"
+                className="flex h-full w-full flex-col items-center gap-1.5 rounded-xl border border-border bg-panel p-2.5 text-center shadow-[var(--shadow-panel)] transition hover:border-accent/45 hover:shadow-md"
               >
-                <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-border bg-surface">
+                <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-border bg-transparent">
                   {src && categoryHasImage(slug) ? (
                     <Image
                       src={src}
                       alt={categoryImageAlt(slug, title)}
                       fill
                       className="object-cover"
-                      sizes="48px"
+                      sizes="56px"
                     />
                   ) : null}
                 </div>

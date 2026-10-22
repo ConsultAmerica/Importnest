@@ -3,12 +3,15 @@ import {
   buildRecommendationPanel,
   FALLBACK_COPY,
   formatMatchStatus,
+  formatTotalKnownCost,
   hasFulfillmentSignal,
   hasStructuredProtectionData,
   hasTiedTop,
+  missingInformationForListing,
   NEUTRAL_RECOMMENDATION_LABEL,
   NO_RECOMMENDATION_TEXT,
   PRIORITY_LABELS,
+  SHIPPING_NOT_DISCLOSED,
   protectionDetailItems,
   protectionScore,
   sortCompareRows,
@@ -574,5 +577,19 @@ describe("hasFulfillmentSignal — fallback signals for Fastest available, no de
         makeListing({ pickupAvailable: false, availabilityLabel: FALLBACK_COPY.availability }),
       ),
     ).toBe(false);
+  });
+});
+
+describe("undisclosed shipping", () => {
+  it("formats a floor and records the gap", () => {
+    const listing = makeListing({ price: 40, verifiedDiscount: 0, shipping: null, mandatoryFees: 2 });
+    expect(formatTotalKnownCost(listing)).toBe("from $42.00, shipping not disclosed");
+    expect(missingInformationForListing(listing)).toContain(SHIPPING_NOT_DISCLOSED);
+  });
+
+  it("keeps a disclosed free-shipping total as a complete price", () => {
+    const listing = makeListing({ price: 40, verifiedDiscount: 0, shipping: 0, mandatoryFees: 2 });
+    expect(formatTotalKnownCost(listing)).toBe("$42.00");
+    expect(missingInformationForListing(listing)).not.toContain(SHIPPING_NOT_DISCLOSED);
   });
 });

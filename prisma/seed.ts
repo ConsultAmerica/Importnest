@@ -77,6 +77,34 @@ async function seedListings(productId: string, defs: ListingSeed[]) {
         status: def.matchStatus ?? "approved",
       },
     });
+
+    // Two prior days at a higher Total Known Cost so cards can show a real
+    // price-drop / historical-low badge from PriceHistory — never invent it.
+    if ((def.matchStatus ?? "approved") === "approved") {
+      const ship = def.shipping ?? 0;
+      await prisma.priceHistory.createMany({
+        data: [
+          {
+            listingId: def.id,
+            price: def.price * 1.12,
+            shipping: ship,
+            capturedAt: minutesAgo(60 * 24 * 14),
+          },
+          {
+            listingId: def.id,
+            price: def.price * 1.05,
+            shipping: ship,
+            capturedAt: minutesAgo(60 * 24 * 3),
+          },
+          {
+            listingId: def.id,
+            price: def.price,
+            shipping: ship,
+            capturedAt: minutesAgo(def.freshnessMinutesAgo),
+          },
+        ],
+      });
+    }
   }
 }
 
@@ -248,6 +276,13 @@ async function main() {
     { id: "src-amazon", name: "Amazon", sourceType: "affiliate-feed" },
     { id: "src-idealo", name: "Idealo", sourceType: "licensed-provider" },
     { id: "src-google-shopping", name: "Google Shopping", sourceType: "affiliate-feed" },
+    {
+      id: "src-ebay",
+      name: "eBay",
+      sourceType: "affiliate-feed",
+      licensingNotes:
+        "eBay Browse API via the eBay Partner Network. Outbound links must use itemAffiliateWebUrl when a campaign id is configured.",
+    },
   ];
   for (const source of sources) {
     await prisma.source.create({ data: { ...source, isActive: true } });

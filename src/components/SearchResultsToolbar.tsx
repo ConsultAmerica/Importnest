@@ -5,72 +5,8 @@ import { useRouter } from "next/navigation";
 import { CategoryVisualCard } from "@/components/CategoryVisualCard";
 import type { ResultsPageParams } from "@/components/SearchResultsLayout";
 import { categoryDisplayTitle, normalizeCategorySlug } from "@/lib/category-visuals";
+import { prefsChips } from "@/lib/result-filter-labels";
 import { RESULTS_SORT_OPTIONS, type ResultsSort } from "@/lib/search-results";
-
-function prefsChips(params: ResultsPageParams): { label: string; clearKey: string }[] {
-  const chips: { label: string; clearKey: string }[] = [];
-  if (params.q?.trim())
-    chips.push({ label: `Query: “${params.q.trim()}”`, clearKey: "q" });
-  const chipCategorySlug = normalizeCategorySlug(params.category);
-  if (chipCategorySlug)
-    chips.push({
-      label: `Category: ${categoryDisplayTitle(chipCategorySlug)}`,
-      clearKey: "category",
-    });
-  if (params.brand) chips.push({ label: `Brand: ${params.brand}`, clearKey: "brand" });
-  else if (params.brands && params.brands !== "any")
-    chips.push({ label: `Brands: ${params.brands}`, clearKey: "brands" });
-  const max = params.priceMax || params.budgetMax;
-  if (max) chips.push({ label: `Under $${max}`, clearKey: params.priceMax ? "priceMax" : "budgetMax" });
-  if (params.priceMin) chips.push({ label: `From $${params.priceMin}`, clearKey: "priceMin" });
-  if (params.condition)
-    chips.push({
-      label: `Condition: ${params.condition.replace(/_/g, " ")}`,
-      clearKey: "condition",
-    });
-  if (params.color) chips.push({ label: params.color, clearKey: "color" });
-  if (params.ratingMin) chips.push({ label: `${params.ratingMin}★ & up`, clearKey: "ratingMin" });
-  if (params.freeShipping === "1") chips.push({ label: "Free shipping", clearKey: "freeShipping" });
-  if (params.pickup === "1") chips.push({ label: "Pickup available", clearKey: "pickup" });
-  if (params.available === "0") chips.push({ label: "Including unavailable", clearKey: "available" });
-  if (params.source) chips.push({ label: "Selected retailer", clearKey: "source" });
-  if (params.comparable === "0" || params.alt === "exact")
-    chips.push({ label: "Exact-leaning matches", clearKey: "comparable" });
-  if (params.saved === "1") chips.push({ label: "Saved only", clearKey: "saved" });
-  if (params.deliveryBy)
-    chips.push({ label: `Delivery: ${params.deliveryBy}`, clearKey: "deliveryBy" });
-  if (params.priority) chips.push({ label: `Priority: ${params.priority}`, clearKey: "priority" });
-
-  const attrChips: [keyof ResultsPageParams, string][] = [
-    ["attr_fitment", "Fitment"],
-    ["attr_install", "Install"],
-    ["attr_ship_weight", "Ship weight"],
-    ["attr_material", "Material"],
-    ["attr_finish", "Finish"],
-    ["attr_power", "Power"],
-    ["attr_hair", "Hair"],
-    ["attr_skin", "Skin"],
-    ["attr_cert", "Cert"],
-    ["attr_water", "Water / IPX"],
-    ["attr_weight", "Weight"],
-    ["attr_activity", "Activity"],
-    ["attr_color", "Color"],
-    ["attr_screen", "Screen"],
-    ["attr_capacity", "Capacity"],
-    ["attr_energy", "Energy"],
-  ];
-  for (const [key, label] of attrChips) {
-    const v = params[key];
-    if (v) chips.push({ label: `${label}: ${v}`, clearKey: key });
-  }
-  if (params.vehicleYear || params.vehicleMake || params.vehicleModel) {
-    chips.push({
-      label: `Vehicle: ${[params.vehicleYear, params.vehicleMake, params.vehicleModel].filter(Boolean).join(" ")}`,
-      clearKey: "vehicleYear",
-    });
-  }
-  return chips;
-}
 
 /** Keep only browse context (q / category / view / sort) — drop applied facets. */
 function clearFiltersHref(params: ResultsPageParams) {
@@ -100,11 +36,14 @@ export function SearchResultsToolbar({
   total,
   sort,
   hideCategoryVisual = false,
+  browsingIdeas = false,
 }: {
   params: ResultsPageParams;
   total: number;
   sort: ResultsSort;
   hideCategoryVisual?: boolean;
+  /** Category browse has demo tiles even though no live listing matched. */
+  browsingIdeas?: boolean;
 }) {
   const router = useRouter();
   const chips = prefsChips(params);
@@ -137,11 +76,23 @@ export function SearchResultsToolbar({
     router.push(`/search/results?${next.toString()}`);
   }
 
-  const showingLabel = queryLabel
-    ? `Showing ${total} result${total === 1 ? "" : "s"} for “${queryLabel}”`
-    : categoryTitle
-      ? `Showing ${total} result${total === 1 ? "" : "s"} for ${categoryTitle}`
-      : `Showing ${total} result${total === 1 ? "" : "s"}`;
+  const sparseCategoryBrowse =
+    !queryLabel && Boolean(categoryTitle) && total > 0 && total < 3 && !browsingIdeas;
+  const showingLabel = browsingIdeas && total === 0
+    ? queryLabel
+      ? `Browse ideas for “${queryLabel}”`
+      : categoryTitle
+        ? `Browse ideas in ${categoryTitle}`
+        : "Browse ideas"
+    : sparseCategoryBrowse
+      ? total === 1
+        ? `Only 1 live offer in ${categoryTitle} — `
+        : `Only ${total} live offers in ${categoryTitle} — `
+    : queryLabel
+      ? `Showing ${total} result${total === 1 ? "" : "s"} for “${queryLabel}”`
+      : categoryTitle
+        ? `Showing ${total} result${total === 1 ? "" : "s"} for ${categoryTitle}`
+        : `Showing ${total} result${total === 1 ? "" : "s"}`;
   const facetChipCount = filterChipCount(params);
   const trail = [categoryTitle, queryLabel].filter(Boolean).join(" › ");
 
@@ -187,6 +138,12 @@ export function SearchResultsToolbar({
       <div className="results-toolbar-bar results-toolbar-sticky">
         <p className="min-w-0 text-sm font-semibold text-navy-900" aria-live="polite">
           {showingLabel}
+          {sparseCategoryBrowse ? (
+            // One tap back up to the type carousel instead of hunting for it.
+            <a href="#browse-types" className="text-link underline-offset-2 hover:underline">
+              browse popular types ↑
+            </a>
+          ) : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="results-view-switch" role="group" aria-label="Result layout">

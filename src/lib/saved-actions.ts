@@ -81,6 +81,51 @@ export async function setPriceAlertAction(canonicalProductId: string, redirectTo
   revalidatePath("/saved");
 }
 
+export type QuickAlertResult =
+  | { ok: true; target: number }
+  | { ok: false; reason: "auth" | "invalid" };
+
+/**
+ * One-tap price alert from a product card's bottom sheet. Unlike
+ * setPriceAlertAction it never redirects — the sheet stays on the results page
+ * and shows its own success / sign-in state. Also saves the product so the alert
+ * appears under Saved & alerts.
+ */
+export async function quickPriceAlertAction(
+  canonicalProductId: string,
+  target: number,
+): Promise<QuickAlertResult> {
+  const user = await getOrCreateAppUser();
+  if (!user) return { ok: false, reason: "auth" };
+  if (!Number.isFinite(target) || target <= 0 || target > 1_000_000) {
+    return { ok: false, reason: "invalid" };
+  }
+  const rounded = Math.round(target * 100) / 100;
+
+  await prisma.$transaction([
+    prisma.savedProduct.upsert({
+      where: { userId_canonicalProductId: { userId: user.id, canonicalProductId } },
+      update: {},
+      create: { userId: user.id, canonicalProductId },
+    }),
+    prisma.alert.upsert({
+      where: {
+        userId_canonicalProductId_type: { userId: user.id, canonicalProductId, type: "price-drop" },
+      },
+      update: { threshold: String(rounded), isActive: true },
+      create: {
+        userId: user.id,
+        canonicalProductId,
+        type: "price-drop",
+        threshold: String(rounded),
+        isActive: true,
+      },
+    }),
+  ]);
+  revalidatePath("/saved");
+  return { ok: true, target: rounded };
+}
+
 export async function removeAlertAction(canonicalProductId: string, alertType: string, redirectTo: string) {
   const user = await requireUser(redirectTo);
   await prisma.alert.deleteMany({ where: { userId: user.id, canonicalProductId, type: alertType } });

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { minutesSince } from "@/lib/compare-view";
+import { minutesSince, knownOfferTotal } from "@/lib/compare-view";
 import { productImageFor } from "@/lib/product-images";
 
 export type BestDealItem = {
@@ -16,6 +16,8 @@ export type BestDealItem = {
   dealBadge: string;
   offerCount: number;
   sourceCount: number;
+  /** Approved retailer names behind the offers, in listing order. */
+  sourceNames: string[];
   isSaved: boolean;
   freshnessMinutesAgo: number;
   /** Real seeded average rating — never fabricated. */
@@ -26,7 +28,7 @@ export type BestDealItem = {
     sourceName: string;
     condition: string;
     price: number;
-    shipping: number;
+    shipping: number | null;
     fees: number;
   };
 };
@@ -96,7 +98,7 @@ async function getBestDealsUnsafe(
   for (const listing of listings) {
     const id = listing.canonicalProductId;
     if (!id) continue;
-    const total = listing.price + listing.shipping + listing.fees;
+    const total = knownOfferTotal(listing.price, listing.shipping, listing.fees);
     const bestListing: BestDealItem["bestListing"] = {
       listingId: listing.id,
       sourceName: listing.source.name,
@@ -150,7 +152,7 @@ async function getBestDealsUnsafe(
   const byDay = new Map<string, Map<string, number>>();
   for (const row of history) {
     const productId = listingToProduct.get(row.listingId);
-    if (!productId) continue;
+    if (!productId || row.shipping == null || !Number.isFinite(row.shipping)) continue;
     const day = row.capturedAt.toISOString().slice(0, 10);
     const total = row.price + row.shipping;
     let days = byDay.get(productId);
@@ -207,6 +209,7 @@ async function getBestDealsUnsafe(
         dealBadge,
         offerCount: agg.offerCount,
         sourceCount: agg.sourceNames.size,
+        sourceNames: [...agg.sourceNames],
         isSaved: savedProductIds.has(id),
         freshnessMinutesAgo: minutesSince(agg.freshestAt),
         rating: product.averageRating,

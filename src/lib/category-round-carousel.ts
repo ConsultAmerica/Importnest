@@ -4,9 +4,9 @@
  * Automotive, Outdoors, Home). Categories not in BUILDERS resolve to an empty
  * list, so CategoryRoundCarousel simply renders nothing for them.
  *
- * Subtype tiles use opaque skin-fill PNGs under /images/subtypes/{category}/
- * (studio plates replaced with #EDE8E2) and photo-cover so circles never show
- * a white disc. Reset tiles use lifestyle category collages with cover.
+ * Subtype tiles use product PNGs under /images/subtypes/{category}/ with
+ * transparent plates so the circle CSS white background shows through.
+ * Reset tiles use lifestyle category collages.
  */
 
 import type { CategoryImageMode, CategoryRoundCarouselItem } from "@/components/CategoryRoundCarousel";
@@ -63,7 +63,8 @@ function buildCategoryItems(categorySlug: string, subtypes: SubtypeDef[]): Categ
 
 /** Opaque skin-fill subtype PNG helper — keeps paths consistent and auditable. */
 function subtypePng(category: string, file: string): string {
-  return `/images/subtypes/${category}/${file}.png`;
+  // Query keeps browsers from reusing the old beige and dark studio plates.
+  return `/images/subtypes/${category}/${file}.png?v=8`;
 }
 
 /** Opaque skin-fill tiles — cover edge-to-edge (no contain padding ring). */

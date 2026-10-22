@@ -47,7 +47,7 @@ export type CompareListingView = {
   condition: string;
   price: number;
   verifiedDiscount: number;
-  shipping: number;
+  shipping: number | null;
   mandatoryFees: number;
   deliveryLabel: string;
   pickupAvailable: boolean;
@@ -129,6 +129,8 @@ export type RecommendationPanelModel = {
   retailerName: string;
   listingId: string;
   totalKnownCost: number;
+  /** False when the total is a floor because shipping was not disclosed. */
+  shippingDisclosed: boolean;
   positiveFactors: RankingFactor[];
   tradeOffs: RankingFactor[];
   missingInformation: string[];
@@ -136,13 +138,45 @@ export type RecommendationPanelModel = {
   assumptions: string[];
 };
 
+export const SHIPPING_NOT_DISCLOSED = "Shipping cost not disclosed by this source";
+
+/** True only for a real disclosed amount, including 0 for free shipping. */
+export function hasDisclosedShipping(shipping: number | null | undefined): shipping is number {
+  return typeof shipping === "number" && Number.isFinite(shipping) && shipping >= 0;
+}
+
 export function totalKnownCost(listing: {
   price: number;
   verifiedDiscount: number;
-  shipping: number;
+  shipping: number | null;
   mandatoryFees: number;
 }) {
-  return listing.price - listing.verifiedDiscount + listing.shipping + listing.mandatoryFees;
+  const shipping = hasDisclosedShipping(listing.shipping) ? listing.shipping : 0;
+  return listing.price - listing.verifiedDiscount + shipping + listing.mandatoryFees;
+}
+
+/**
+ * Complete totals render as "$X". Undisclosed shipping renders as a floor so
+ * the missing cost is visible instead of looking free.
+ */
+export function formatTotalKnownCost(listing: {
+  price: number;
+  verifiedDiscount: number;
+  shipping: number | null;
+  mandatoryFees: number;
+}) {
+  const amount = `$${totalKnownCost(listing).toFixed(2)}`;
+  return hasDisclosedShipping(listing.shipping) ? amount : `from ${amount}, shipping not disclosed`;
+}
+
+/** Item + disclosed shipping + fees. Undisclosed shipping is left out of the sum. */
+export function knownOfferTotal(
+  price: number,
+  shipping: number | null | undefined,
+  fees: number | null | undefined,
+) {
+  const fee = typeof fees === "number" && Number.isFinite(fees) && fees >= 0 ? fees : 0;
+  return price + (hasDisclosedShipping(shipping) ? shipping : 0) + fee;
 }
 
 /** Prefer new → open-box → refurbished → used. Lower is better. */
@@ -322,6 +356,9 @@ export function missingInformationForListing(listing: CompareListingView): strin
   if (!listing.url) {
     missing.push("Direct retailer link not available");
   }
+  if (!hasDisclosedShipping(listing.shipping)) {
+    missing.push(SHIPPING_NOT_DISCLOSED);
+  }
   return missing;
 }
 
@@ -343,7 +380,13 @@ export function rankingFactorsForListing(
   const positive: RankingFactor[] = [];
   const tradeOffs: RankingFactor[] = [];
 
-  if (isLowestCost) {
+  if (!hasDisclosedShipping(listing.shipping)) {
+    tradeOffs.push({
+      label: "Shipping not disclosed",
+      detail: `Known costs start at $${cost.toFixed(2)} before shipping.`,
+      positive: false,
+    });
+  } else if (isLowestCost) {
     positive.push({
       label: "Lowest total known cost",
       detail: `$${cost.toFixed(2)} is the lowest among compared offers.`,
@@ -535,6 +578,7 @@ export function buildRecommendationPanel(
     retailerName: top.listing.sourceName,
     listingId: top.listing.id,
     totalKnownCost: totalKnownCost(top.listing),
+    shippingDisclosed: hasDisclosedShipping(top.listing.shipping),
     positiveFactors: cappedPositive,
     tradeOffs,
     missingInformation,

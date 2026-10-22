@@ -3,6 +3,7 @@ import { retailerDirectConnector } from "./retailer-direct";
 import { localElectronicsConnector } from "./local-electronics";
 import { authorizedOutletConnector } from "./authorized-outlet";
 import { discountHomeConnector } from "./discount-home";
+import { ebayConnector } from "./ebay";
 import type { SourceConnector } from "./types";
 
 const connectors: Record<string, SourceConnector> = {
@@ -11,6 +12,7 @@ const connectors: Record<string, SourceConnector> = {
   [localElectronicsConnector.sourceId]: localElectronicsConnector,
   [authorizedOutletConnector.sourceId]: authorizedOutletConnector,
   [discountHomeConnector.sourceId]: discountHomeConnector,
+  [ebayConnector.sourceId]: ebayConnector,
 };
 
 export function getConnector(sourceId: string): SourceConnector {

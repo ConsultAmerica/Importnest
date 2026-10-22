@@ -136,6 +136,13 @@ export function CostBreakdown({
   totalKnownCost: CostBreakdownInput;
   className?: string;
 }) {
+  const shippingLine = formatCostBreakdownLine(shipping);
+  const totalLine = formatCostBreakdownLine(totalKnownCost);
+  const totalText =
+    shippingLine.isMissing && !totalLine.isMissing
+      ? `from ${totalLine.text}, shipping not disclosed`
+      : totalLine.text;
+
   return (
     <dl className={`w-full min-w-[11rem] space-y-1 ${className}`}>
       <Row label="Item price" value={itemPrice} />
@@ -143,7 +150,10 @@ export function CostBreakdown({
       <Row label="Mandatory fees" value={mandatoryFees} />
       <Row label="Verified discount" value={verifiedDiscount} signed />
       <CostStackBar itemPrice={itemPrice} shipping={shipping} mandatoryFees={mandatoryFees} />
-      <Row label="Total known cost" value={totalKnownCost} strong />
+      <div className="mt-1.5 flex items-baseline justify-between gap-3 border-t border-border pt-1.5">
+        <dt className="text-sm font-semibold text-foreground">Total known cost</dt>
+        <dd className="text-base price-text tabular-nums">{totalText}</dd>
+      </div>
       <p className="mt-1.5 flex items-start gap-1 text-[11px] leading-snug text-muted">
         <InfoIcon />
         <span>Taxes may be calculated at checkout if not available here.</span>

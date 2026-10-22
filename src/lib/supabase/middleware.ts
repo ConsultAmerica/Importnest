@@ -1,12 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppUserAdmin } from "@/lib/auth";
+import { LOCAL_SESSION_COOKIE, readSession } from "@/lib/local-auth";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 function getSupabaseKey() {
-  return (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const publishable = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (publishable && !publishable.startsWith("sb_secret_")) return publishable;
+  if (anon && !anon.startsWith("sb_secret_") && !anon.includes("service_role")) return anon;
+  return undefined;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -14,28 +17,38 @@ export async function updateSession(request: NextRequest) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = getSupabaseKey();
-  if (!url || !key) {
-    return supabaseResponse;
+  let user: { id: string; email?: string | null } | null = null;
+
+  if (url && key) {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options),
+          );
+        },
+      },
+    });
+
+    try {
+      const {
+        data: { user: supabaseUser },
+      } = await supabase.auth.getUser();
+      user = supabaseUser;
+    } catch (err) {
+      console.error("[auth] session lookup failed", err);
+    }
   }
 
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!user) {
+    const local = readSession(request.cookies.get(LOCAL_SESSION_COOKIE)?.value);
+    if (local) user = { id: local.id, email: local.email };
+  }
 
   const pathname = request.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith("/admin");
@@ -59,8 +72,9 @@ export async function updateSession(request: NextRequest) {
   if (isLoginRoute && user) {
     const nextPath = request.nextUrl.searchParams.get("next");
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = nextPath?.startsWith("/") ? nextPath : "/saved";
-    redirectUrl.search = "";
+    const target = new URL(safeNextPath(nextPath), request.nextUrl.origin);
+    redirectUrl.pathname = target.pathname;
+    redirectUrl.search = target.search;
     return NextResponse.redirect(redirectUrl);
   }
 

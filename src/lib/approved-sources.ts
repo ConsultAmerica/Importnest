@@ -46,6 +46,12 @@ export const APPROVED_RETAILER_TRUST: Record<string, ApprovedRetailerTrust> = {
     trustHint:
       "Wayfair Home: licensed home marketplace with tracked delivery and documented seller policies.",
   },
+  "src-ebay": {
+    label: "eBay",
+    badge: "Partner marketplace",
+    trustHint:
+      "eBay: Buy It Now offers from the Browse API through the eBay Partner Network. Shipping is counted only when eBay discloses a cost.",
+  },
 };
 
 export function isPublicApprovedSource(sourceId: string) {

@@ -7,6 +7,16 @@ import { colorSwatchStyle } from "@/lib/color-swatches";
 import { navDepartments } from "@/lib/nav-menu";
 import type { SearchResultsFacetOptions } from "@/lib/search-results";
 
+function resultsHref(href: string) {
+  return href.includes("/search/results") ? href : href.replace("/search?", "/search/results?");
+}
+
+function queryOf(href: string) {
+  const match = href.match(/[?&]q=([^&]*)/);
+  if (!match) return "";
+  return decodeURIComponent(match[1].replace(/\+/g, " ")).trim().toLowerCase();
+}
+
 function departmentForCategory(category?: string) {
   if (!category) return null;
   const slug = category === "beauty" ? "beauty-devices" : category;
@@ -18,6 +28,49 @@ function departmentForCategory(category?: string) {
         d.href.includes(`category=${slug}`) ||
         d.href.includes(`category=${category}`),
     ) ?? null
+  );
+}
+
+export function DepartmentBrowse({ params }: { params: ResultsPageParams }) {
+  const dept = useMemo(() => departmentForCategory(params.category), [params.category]);
+  const currentQuery = (params.q ?? "").trim().toLowerCase();
+  if (!dept) return null;
+
+  return (
+    <nav aria-label={`In ${dept.name}`} className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">In {dept.name}</p>
+      <ul className="space-y-1">
+        <li>
+          <Link
+            href={resultsHref(dept.href)}
+            className={`block rounded-lg px-2.5 py-1.5 text-sm font-semibold ${
+              // Same warm active state as the sub-items (navy fill lost its white text to a global link colour).
+              !currentQuery ? "bg-accent/15 text-navy-900" : "text-navy-900 hover:bg-surface"
+            }`}
+          >
+            All {dept.name}
+          </Link>
+        </li>
+        {dept.items.map((item) => {
+          const href = resultsHref(item.href);
+          const active = queryOf(href) !== "" && queryOf(href) === currentQuery;
+          return (
+            <li key={item.href + item.label}>
+              <Link
+                href={href}
+                className={`block rounded-lg px-2.5 py-1.5 text-sm ${
+                  active
+                    ? "bg-accent/15 font-semibold text-navy-900"
+                    : "text-navy-800 hover:bg-surface"
+                }`}
+              >
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 
@@ -39,6 +92,10 @@ export function SearchFiltersFields({
   const [minVal, setMinVal] = useState(params.priceMin ?? "");
   const [maxVal, setMaxVal] = useState(params.priceMax ?? params.budgetMax ?? "");
   const dept = useMemo(() => departmentForCategory(params.category), [params.category]);
+  const categories =
+    params.category && !facets.categories.some((c) => c.slug === params.category)
+      ? [{ slug: params.category, name: dept?.name ?? params.category, count: 0 }, ...facets.categories]
+      : facets.categories;
 
   return (
     <>
@@ -53,51 +110,6 @@ export function SearchFiltersFields({
       {params.sort ? <input type="hidden" name="sort" value={params.sort} /> : null}
       {params.view ? <input type="hidden" name="view" value={params.view} /> : null}
 
-      {dept ? (
-        <fieldset className="space-y-2">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-muted">
-            In {dept.name}
-          </legend>
-          <ul className="space-y-1">
-            <li>
-              <Link
-                href={dept.href.replace("/search?", "/search/results?")}
-                className={`block rounded-lg px-2.5 py-1.5 text-sm font-semibold ${
-                  !params.q ? "bg-navy-900 text-white" : "text-navy-900 hover:bg-surface"
-                }`}
-              >
-                All {dept.name}
-              </Link>
-            </li>
-            {dept.items.map((item) => {
-              const active = params.q && item.href.includes(`q=${encodeURIComponent(params.q)}`)
-                ? true
-                : params.q
-                  ? item.href.toLowerCase().includes(params.q.toLowerCase().replace(/\s+/g, "+")) ||
-                    item.label.toLowerCase().includes(params.q.toLowerCase())
-                  : false;
-              const href = item.href.includes("/search/results")
-                ? item.href
-                : item.href.replace("/search?", "/search/results?");
-              return (
-                <li key={item.href + item.label}>
-                  <Link
-                    href={href}
-                    className={`block rounded-lg px-2.5 py-1.5 text-sm ${
-                      active
-                        ? "bg-accent/15 font-semibold text-navy-900"
-                        : "text-navy-800 hover:bg-surface"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </fieldset>
-      ) : null}
-
       <fieldset className="space-y-2">
         <legend className="text-xs font-semibold uppercase tracking-wide text-muted">Category</legend>
         <select
@@ -106,7 +118,7 @@ export function SearchFiltersFields({
           className="w-full rounded-lg border border-border bg-white px-2.5 py-2 text-sm outline-none focus:border-navy-800 focus:ring-2 focus:ring-navy-900/20"
         >
           <option value="">All categories</option>
-          {facets.categories.map((c) => (
+          {categories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.name} ({c.count})
             </option>

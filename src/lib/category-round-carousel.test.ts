@@ -77,7 +77,8 @@ describe("category-round-carousel", () => {
   it("resolves cooking to a skin-fill subtype PNG rather than inventing a path", () => {
     const items = getCategoryRoundCarouselItems("appliances");
     const cooking = items.find((i) => i.slug === "cooking");
-    expect(cooking?.imageUrl).toBe("/images/subtypes/appliances/air-fryer.png");
+    // Optional ?v=N is a cache-buster bumped whenever the subtype PNGs are regenerated.
+    expect(cooking?.imageUrl).toMatch(/^\/images\/subtypes\/appliances\/air-fryer\.png(\?v=\d+)?$/);
     expect(cooking?.imageMode).toBe("photo-cover");
   });
 

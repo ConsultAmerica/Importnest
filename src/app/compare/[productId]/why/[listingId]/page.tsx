@@ -3,7 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Freshness } from "@/components/Freshness";
 import { PageShell } from "@/components/PageShell";
-import { getListingExplanation, totalKnownCost } from "@/lib/compare-data";
+import { getListingExplanation, formatTotalKnownCost } from "@/lib/compare-data";
+import { hasDisclosedShipping } from "@/lib/compare-view";
 import { BRAND_FALLBACK_IMAGE, sourceImageFor } from "@/lib/images";
 
 export default async function WhyPage({
@@ -16,7 +17,7 @@ export default async function WhyPage({
   if (!data) notFound();
 
   const { listing, recommendation } = data;
-  const total = totalKnownCost(listing);
+  const totalLabel = formatTotalKnownCost(listing);
 
   return (
     <PageShell>
@@ -124,7 +125,7 @@ export default async function WhyPage({
 
         <aside className="panel h-fit p-5">
           <p className="text-sm font-semibold text-foreground">Cost breakdown</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-price">${total.toFixed(2)}</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-price">{totalLabel}</p>
           <p className="text-xs text-muted">Total known cost</p>
 
           <dl className="mt-4 space-y-2 border-t border-border pt-3 text-sm text-muted">
@@ -138,7 +139,9 @@ export default async function WhyPage({
             </div>
             <div className="flex justify-between">
               <dt>Shipping</dt>
-              <dd>${listing.shipping.toFixed(2)}</dd>
+              <dd>
+                {hasDisclosedShipping(listing.shipping) ? `$${listing.shipping.toFixed(2)}` : "Not provided"}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt>Mandatory fees</dt>
@@ -146,7 +149,7 @@ export default async function WhyPage({
             </div>
             <div className="flex justify-between border-t border-border pt-2 font-semibold text-foreground">
               <dt>Total</dt>
-              <dd className="text-price">${total.toFixed(2)}</dd>
+              <dd className="text-price">{totalLabel}</dd>
             </div>
           </dl>
 

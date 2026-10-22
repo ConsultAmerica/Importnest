@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { AskAiAgent } from "@/components/AskAiAgent";
 import { CartProvider } from "@/components/CartProvider";
 import { CompareBasketProvider } from "@/components/CompareBasketProvider";
 import { DevToolsModal } from "@/components/DevToolsModal";
@@ -58,6 +59,7 @@ export default function RootLayout({
           <CartProvider>
             <RecentlyViewedProvider>
               {children}
+              <AskAiAgent />
               <DevToolsModal />
             </RecentlyViewedProvider>
           </CartProvider>

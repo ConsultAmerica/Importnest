@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { minutesSince } from "@/lib/compare-view";
+import { minutesSince, knownOfferTotal } from "@/lib/compare-view";
 import { getCompareRows, totalKnownCost } from "@/lib/compare-data";
 
 export type AlertType = "price-drop" | "back-in-stock" | "any-change";
@@ -158,10 +158,11 @@ export type WatchlistItem = {
 };
 
 function bucketDailyMin(
-  rows: { price: number; shipping: number; capturedAt: Date }[],
+  rows: { price: number; shipping: number | null; capturedAt: Date }[],
 ): PriceHistoryPoint[] {
   const byDay = new Map<string, number>();
   for (const row of rows) {
+    if (row.shipping == null || !Number.isFinite(row.shipping) || row.shipping < 0) continue;
     const day = row.capturedAt.toISOString().slice(0, 10);
     const total = row.price + row.shipping;
     const existing = byDay.get(day);
@@ -245,7 +246,7 @@ export async function getUserWatchlist(userId: string): Promise<WatchlistItem[]>
     const currentPrice =
       productListings.length === 0
         ? null
-        : Math.min(...productListings.map((l) => l.price + l.shipping + l.fees));
+        : Math.min(...productListings.map((l) => knownOfferTotal(l.price, l.shipping, l.fees)));
 
     const sourceCoverage = new Set(productListings.map((l) => l.sourceId)).size;
     const offerCount = productListings.length;

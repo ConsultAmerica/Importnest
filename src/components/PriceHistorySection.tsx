@@ -1,4 +1,5 @@
 import { describePriceHistoryForScreenReaders, type ProductPriceHistorySummary } from "@/lib/compare-data";
+import { PriceSparkline } from "@/components/PriceSparkline";
 import { formatPriceChange } from "@/lib/price-change";
 
 function PriceTrendChart({
@@ -144,17 +145,29 @@ export function PriceHistorySection({
             ) : null}
             {change ? (
               <div className="rounded-xl border border-border bg-surface/80 px-3 py-2.5">
-                <dt className="text-xs font-medium text-muted">Last price change</dt>
-                <dd className="mt-0.5 text-base font-semibold tabular-nums text-navy-900">
-                  {change.text}
-                  {summary.lastChangeAt ? (
-                    <span className="mt-0.5 block text-xs font-normal text-muted">
-                      {summary.lastChangeAt}
-                    </span>
-                  ) : null}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-muted">Last price change</dt>
+                    <dd className="mt-0.5 text-base font-semibold tabular-nums text-navy-900">
+                      {change.text}
+                      {summary.lastChangeAt ? (
+                        <span className="mt-0.5 block text-xs font-normal text-muted">
+                          {summary.lastChangeAt}
+                        </span>
+                      ) : null}
+                    </dd>
+                  </div>
+                  <PriceSparkline points={summary.points} width={88} height={32} />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-surface/80 px-3 py-2.5">
+                <dt className="text-xs font-medium text-muted">Trend</dt>
+                <dd className="mt-1">
+                  <PriceSparkline points={summary.points} width={120} height={36} />
                 </dd>
               </div>
-            ) : null}
+            )}
           </dl>
           <PriceTrendChart points={summary.points} />
         </>

@@ -25,6 +25,9 @@ five working product-data connectors (with scheduled sync), and a real search fl
      `NEXT_PUBLIC_SUPABASE_ANON_KEY`) — from your Supabase project settings
    - `CRON_SECRET` — optional locally; required in production to authorize the scheduled sync
      route (see [Scheduled sync](#scheduled-sync))
+   - `ANTHROPIC_API_KEY` — optional; enables **Ask AI** and AI search-intent extraction
+     (Claude). Without it, Ask AI shows a setup message and search falls back to
+     deterministic heuristics. Create a key at https://console.anthropic.com/
 
 3. **Apply the schema and seed demo data**
    ```bash
@@ -88,26 +91,41 @@ five working product-data connectors (with scheduled sync), and a real search fl
   same DummyJSON API as local-electronics, scoped to home-goods categories instead (home
   decoration, furniture, kitchen accessories, groceries) to match this source's "Discount Home
   Supply" identity. Matches the same way local-electronics does (barcode-as-UPC or sku-as-MPN).
+- `src/lib/connectors/ebay.ts` (source `src-ebay`) — eBay Browse API through the eBay Partner
+  Network. Set `EBAY_CLIENT_ID` and `EBAY_CLIENT_SECRET` (application token). Optional:
+  `EBAY_CAMPAIGN_ID` (required for `itemAffiliateWebUrl` commission tracking),
+  `EBAY_AFFILIATE_REFERENCE_ID`, `EBAY_DELIVERY_ZIP` (shipping estimates; never assumed),
+  `EBAY_DELIVERY_COUNTRY` (default `US`), `EBAY_MARKETPLACE_ID` (default `EBAY_US`),
+  `EBAY_ENVIRONMENT=sandbox`. A 12-digit argument searches by GTIN and stamps that UPC; any
+  other argument is a   keyword search that reads UPC/MPN from item specifics on the offers it keeps.
+  Calculated shipping is stored as null. A disclosed FIXED cost, including $0,
+  is stored as that number. With no argument, sync searches up to 8 catalog UPCs. Missing keys on that path return no listings.
 - Run a sync manually: `npm run sync:official -- <upc>`, `npm run sync:retailer-direct`,
-  `npm run sync:local-electronics`, `npm run sync:authorized-outlet`, or
-  `npm run sync:discount-home` (or generically, `npm run sync -- <sourceId> [query]` for any
-  connector in the registry). `npm run sync:all` runs every registered connector's default
-  (no-query) fetch in one pass — the same function the cron route below calls.
-- `src/lib/connectors/registry.ts` maps a `Source.id` to its connector. All five seeded sources now
-  have a real connector.
+  `npm run sync:local-electronics`, `npm run sync:authorized-outlet`,
+  `npm run sync:discount-home`, or `npm run sync:ebay -- <upc-or-model>` (or generically,
+  `npm run sync -- <sourceId> [query]` for any connector in the registry). `npm run sync:all`
+  runs every registered connector's default (no-query) fetch in one pass — the same function
+  the cron route below calls.
+- `src/lib/connectors/registry.ts` maps a `Source.id` to its connector.
 
 ## Scheduled sync
 
-`src/app/api/cron/sync/route.ts` runs every registered connector (via
-`src/lib/connectors/sync-all.ts`) and upserts the results; one connector failing doesn't stop the
-others. `vercel.json` schedules it once daily through [Vercel
+`src/app/api/cron/sync/route.ts` runs the idempotent
+`MerchantFeedIngestionService` (`src/lib/connectors/batch-ingest.ts`) over every
+registered connector: per-offer normalize errors are isolated, upserts key on
+`sourceId + externalId` (no drop-and-replace), and the response includes
+per-source metrics plus a stale-listing count (staleness is derived from
+`Listing.freshnessCapturedAt` at read time — there is no separate status
+column to mutate). `vercel.json` schedules it once daily through [Vercel
 Cron](https://vercel.com/docs/cron-jobs) when deployed there (Hobby-plan accounts are capped at one
 run per day per cron job — bump the schedule if the project is ever upgraded to Pro). Vercel signs
 cron requests with
 `Authorization: Bearer $CRON_SECRET`, and the route checks that header — set `CRON_SECRET` in the
 deployment's environment variables, or the route rejects every request with 401 (fails closed
 rather than leaving an unauthenticated endpoint that triggers DB writes). Outside Vercel, run
-`npm run sync:all` on whatever scheduler is available instead.
+`npm run sync:all` or `npm run sync:batch` on whatever host scheduler is available — ingestion is
+intentionally kept out of the Next.js request process (no in-process `node-cron`) so batch work
+does not block the app server.
 
 ## Known gaps
 
@@ -115,6 +133,10 @@ rather than leaving an unauthenticated endpoint that triggers DB writes). Outsid
   copy ("Warranty information not provided", etc.) rather than a real value.
 - The UPCItemDB trial tier caps at 100 requests/day, and it only accepts a UPC per request (no
   keyword search), so its slot in the scheduled sync currently no-ops (see `src-official` above).
+- eBay sync needs `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` and an active `src-ebay` Source row
+  (included in `prisma/seed.ts`). An existing database that was seeded before that row has to
+  gain the source before upserts succeed. Without a campaign id, clicks still open the listing
+  but the eBay Partner Network will not attribute them.
 
 ## Project structure
 

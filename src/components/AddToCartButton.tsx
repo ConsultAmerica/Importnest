@@ -28,9 +28,9 @@ export function CartIcon({ className = "" }: { className?: string }) {
 export type AddToCartButtonProps = NewCartItem & {
   /** Icon-only circular style to sit alongside AddToCompareButton in card corners/footers. */
   compact?: boolean;
-  /** Override the visible label on the non-compact button, e.g. "Add this offer to cart" on per-listing offer cards. Defaults to "Add to cart". */
+  /** Override the visible label on the non-compact button. Defaults to "Save offer for later". */
   label?: string;
-  /** Override the visible "in cart" label, e.g. "Added to cart" (default). */
+  /** Override the visible "in cart" label, e.g. "Saved for later" (default). */
   addedLabel?: string;
   /**
    * Override the accessible name for the "add" state. Required when multiple
@@ -54,8 +54,8 @@ export type AddToCartButtonProps = NewCartItem & {
  */
 export function AddToCartButton({
   compact = false,
-  label = "Add to cart",
-  addedLabel = "Added to cart",
+  label = "Save offer for later",
+  addedLabel = "Saved for later",
   addAriaLabel,
   removeAriaLabel,
   onAdded,
@@ -94,11 +94,13 @@ export function AddToCartButton({
         aria-label={ariaLabel}
         aria-pressed={inCart}
         disabled={limitReached}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-panel/95 shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:hover:border-border ${
+        className={`flex h-auto min-h-9 min-w-9 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-border bg-panel/95 px-1.5 py-1 text-[10px] font-semibold leading-none shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:hover:border-border ${
           inCart ? "text-accent" : limitReached ? "text-muted" : "text-navy-900"
         }`}
       >
         <CartIcon />
+        {/* "Save" now belongs to the heart (Saved & alerts); this is the compare cart. */}
+        <span>{inCart ? "In cart" : "Cart"}</span>
       </button>
     );
   }

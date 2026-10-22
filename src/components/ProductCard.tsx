@@ -1,7 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ProductCardActions } from "@/components/ProductCardActions";
+import { ProductCardSaveButton } from "@/components/ProductCardSaveButton";
+import { TrackPriceButton } from "@/components/TrackPriceButton";
 import { ProductImage } from "@/components/ProductImage";
 import { RefreshPricesButton } from "@/components/RefreshPricesButton";
+import { APPROVED_RETAILER_TRUST } from "@/lib/approved-sources";
 import { colorSwatchStyle } from "@/lib/color-swatches";
 import {
   formatFreshness,
@@ -9,7 +13,19 @@ import {
   needsFreshnessWarning,
   freshnessWarningLabel,
 } from "@/lib/freshness";
+import { sourceImageFor } from "@/lib/images";
 import { productImageAlt } from "@/lib/product-images";
+import { hasDisclosedShipping } from "@/lib/compare-view";
+import { TkcRetailerDialog, type TkcOfferLine } from "@/components/TkcRetailerDialog";
+
+function merchantHandoff(offerCount: number | null | undefined, sourceNames: string[]) {
+  if (offerCount == null || offerCount < 1 || sourceNames.length === 0) return null;
+  const shown = sourceNames.slice(0, 3);
+  const extra = sourceNames.length - shown.length;
+  const who = extra > 0 ? `${shown.join(", ")}, +${extra} more` : shown.join(" and ");
+  const offers = offerCount === 1 ? "1 offer" : `${offerCount} offers`;
+  return `${offers} from ${who}`;
+}
 
 function swatchCss(label: string): string {
   return colorSwatchStyle(label).background;
@@ -22,7 +38,7 @@ export type ProductCardListing = {
   sourceName: string;
   condition: string;
   price: number;
-  shipping: number;
+  shipping: number | null;
   fees: number;
 };
 
@@ -55,6 +71,10 @@ export type ProductCardProps = {
   fromPrice?: number | null;
   /** Prior price for strikethrough — only when real history / seeded demo exists. */
   previousPrice?: number | null;
+  /** Approved retailers behind the offers, lowest total first. */
+  sourceNames?: string[];
+  /** Per-retailer Total Known Cost lines for the info dialog. */
+  offerBreakdown?: TkcOfferLine[];
   offerCount?: number | null;
   sourceCount?: number | null;
   freshnessMinutesAgo?: number | null;
@@ -62,6 +82,8 @@ export type ProductCardProps = {
   categorySlug?: string | null;
   bestListing?: ProductCardListing | null;
   isSaved?: boolean;
+  /** An active price-drop alert exists for this shopper — the bell shows as on. */
+  alertActive?: boolean;
   signedIn?: boolean;
   redirectTo?: string;
   /** Extra match/status chips — never fabricated. */
@@ -71,7 +93,7 @@ export type ProductCardProps = {
    * Prices/ratings still render only if the caller passes real seeded values.
    */
   showCommerceActions?: boolean;
-  /** Override primary CTA label (default “View offers”). */
+  /** Override primary CTA label (default “Compare offers”). */
   primaryCtaLabel?: string;
   /** Optional note under rating (e.g. “demo score”). */
   ratingNote?: string | null;
@@ -85,6 +107,9 @@ export type ProductCardProps = {
 
 function badgeToneClass(badge: string) {
   const key = badge.toLowerCase();
+  if (key.includes("price drop") || key.includes("lowest tracked")) {
+    return "badge-savings";
+  }
   if (key.includes("deal") || key.includes("save") || key.includes("%") || key === "demo") {
     return key === "demo" || key.includes("demo")
       ? "border border-border bg-panel/95 text-foreground"
@@ -95,10 +120,82 @@ function badgeToneClass(badge: string) {
   return "badge-accent";
 }
 
-function shipFeesLine(listing: ProductCardListing): string | null {
+/** "Item $220.00 + $14.50 ship/fees" for the lowest offer — honest about undisclosed shipping. */
+function lowestOfferMakeup(listing: ProductCardListing): string {
+  const item = `Item $${listing.price.toFixed(2)}`;
+  if (!hasDisclosedShipping(listing.shipping)) return `${item} · shipping not disclosed`;
   const shipFees = listing.shipping + listing.fees;
-  if (shipFees <= 0.009) return null;
-  return `$${listing.price.toFixed(2)} + $${shipFees.toFixed(2)} ship/fees`;
+  return shipFees <= 0.009 ? `${item} · free shipping` : `${item} + $${shipFees.toFixed(2)} ship/fees`;
+}
+
+/** Curated trust badges only (approved-sources) — never inferred from a retailer's name. */
+function isAuthorizedSource(sourceId: string | undefined): boolean {
+  if (!sourceId) return false;
+  const badge = APPROVED_RETAILER_TRUST[sourceId]?.badge;
+  return badge === "Authorized dealer" || badge === "Manufacturer";
+}
+
+/** Why a total is what it is: shipping and fees called out separately, never assumed. */
+function totalDrivers(line: TkcOfferLine): string[] {
+  const out: string[] = [];
+  if (line.shipping == null) out.push("ship not disclosed");
+  else if (line.shipping <= 0.009) out.push("free ship");
+  else out.push(`+$${line.shipping.toFixed(2)} ship`);
+  if (line.fees > 0.009) out.push(`+$${line.fees.toFixed(2)} fees`);
+  if (line.pickup) out.push("pickup");
+  return out;
+}
+
+function TopRetailerLines({ lines }: { lines: TkcOfferLine[] }) {
+  return (
+    <ol>
+      {[...lines]
+        .sort((a, b) => a.total - b.total)
+        .slice(0, 3)
+        .map((line, i) => {
+          const body = (
+            <>
+              <span className="tkc-row-main">
+                <span className="tkc-row-name">
+                  <span className="truncate">{line.sourceName}</span>
+                  {isAuthorizedSource(line.sourceId) ? (
+                    <span className="tkc-row-auth" title="Authorized seller — manufacturer warranty applies">
+                      ✓ Authorized
+                    </span>
+                  ) : null}
+                </span>
+                <span className="tkc-row-drivers">
+                  {i === 0 ? <strong>Lowest total · </strong> : null}
+                  {totalDrivers(line).join(" · ")}
+                </span>
+              </span>
+              <span className="tkc-row-total">
+                ${line.total.toFixed(2)}
+                {line.listingId ? <span aria-hidden="true"> ↗</span> : null}
+              </span>
+            </>
+          );
+          return (
+            <li key={line.listingId ?? line.sourceId ?? line.sourceName}>
+              {line.listingId ? (
+                // Straight to this retailer's offer; /go shows a short hand-off screen first.
+                <a
+                  href={`/go/${line.listingId}`}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="tkc-row-link"
+                  aria-label={`${line.sourceName}: $${line.total.toFixed(2)} Total Known Cost — opens the retailer’s site in a new tab`}
+                >
+                  {body}
+                </a>
+              ) : (
+                <span className="tkc-row-link">{body}</span>
+              )}
+            </li>
+          );
+        })}
+    </ol>
+  );
 }
 
 /**
@@ -123,15 +220,18 @@ export function ProductCard({
   previousPrice,
   offerCount,
   sourceCount,
+  sourceNames = [],
+  offerBreakdown = [],
   freshnessMinutesAgo,
   categorySlug,
   bestListing,
   isSaved = false,
+  alertActive = false,
   signedIn = false,
   redirectTo,
   extraBadges = [],
   showCommerceActions = true,
-  primaryCtaLabel = "View offers",
+  primaryCtaLabel = "Compare offers",
   ratingNote,
   metaNote,
   dealReason,
@@ -160,7 +260,7 @@ export function ProductCard({
       ? "1 source"
       : `${sourceCount} sources`
     : null;
-  const breakdownLine = bestListing ? shipFeesLine(bestListing) : null;
+  const merchantLine = merchantHandoff(offerCount, sourceNames);
 
   return (
     <article className={`product-card group ${compactList ? "product-card-list" : ""}`}>
@@ -181,15 +281,38 @@ export function ProductCard({
           />
           {badge ? (
             <span
-              className={`product-card-badge absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold leading-tight shadow-sm ${badgeToneClass(badge)}`}
+              className={`product-card-badge absolute bottom-3 left-3 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold leading-tight shadow-sm ${badgeToneClass(badge)}`}
             >
               {badge}
             </span>
           ) : null}
         </Link>
+        {/* Phones: Save + Track float on the image corners so the body stays about price. */}
+        {commerce ? (
+          <div className="card-overlay-actions">
+            <ProductCardSaveButton
+              productId={productId}
+              isSaved={isSaved}
+              signedIn={signedIn}
+              redirectTo={saveRedirect}
+              variant="overlay"
+            />
+            <TrackPriceButton
+              productId={productId}
+              productName={productName}
+              currentTotal={fromPrice ?? null}
+              signedIn={signedIn}
+              redirectTo={saveRedirect}
+              initiallyTracking={alertActive}
+              variant="overlay"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="product-card-body">
+        {/* info / buy wrappers are display:contents in grid cards; list rows lay them out as columns. */}
+        <div className="product-card-info">
         <div className="min-w-0 space-y-1">
           <p className="product-card-brand">{brandName}</p>
           <Link href={href} className="product-card-title line-clamp-2 hover:text-link">
@@ -283,7 +406,9 @@ export function ProductCard({
             ))}
           </ul>
         ) : null}
+        </div>
 
+        <div className="product-card-buy">
         {showPrice ? (
           <div className="product-card-price-block">
             <div className="product-card-price-row">
@@ -296,15 +421,55 @@ export function ProductCard({
               ) : null}
             </div>
             <p className="product-card-price-caption">Total Known Cost</p>
-            <p className="product-card-tkc-badge" title="Item + shipping + mandatory fees from approved sources">
-              Includes ship + fees
-              <span className="product-card-tkc-info" aria-hidden="true">
-                ⓘ
-              </span>
-            </p>
-            {breakdownLine ? (
-              <p className="product-card-tkc-breakdown">{breakdownLine}</p>
+            {/* Who has that price and what it's made of, without opening Compare —
+                bestListing is the listing behind fromPrice. */}
+            {bestListing ? (
+              <>
+                <p className="product-card-lowest-at">
+                  {offerCount != null && offerCount > 1 ? "Lowest at" : "Offer from"}{" "}
+                  <span className="product-card-lowest-at-source">{bestListing.sourceName}</span>
+                </p>
+                <p className="product-card-lowest-makeup">
+                  <span aria-hidden="true">└ </span>
+                  {lowestOfferMakeup(bestListing)}
+                </p>
+              </>
             ) : null}
+            {offerBreakdown.length > 1 ? (
+              <>
+                {/* Phones / grid cards: collapsed peek. Desktop list rows: always-open strip. */}
+                <details className="product-card-tkc-peek">
+                  <summary>Top {Math.min(3, offerBreakdown.length)} retailer totals</summary>
+                  <TopRetailerLines lines={offerBreakdown} />
+                </details>
+                <div className="product-card-tkc-strip" aria-label="Top retailer totals">
+                  <TopRetailerLines lines={offerBreakdown} />
+                </div>
+              </>
+            ) : null}
+            <div className="product-card-tkc-badge" title="Item + shipping + mandatory fees − discounts from approved sources">
+              {bestListing && !hasDisclosedShipping(bestListing.shipping)
+                ? "Shipping not disclosed"
+                : "Item + ship + fees"}
+              <TkcRetailerDialog
+                offerCount={offerCount}
+                lines={
+                  offerBreakdown.length > 0
+                    ? offerBreakdown
+                    : bestListing
+                      ? [
+                          {
+                            sourceName: bestListing.sourceName,
+                            total: fromPrice,
+                            price: bestListing.price,
+                            shipping: bestListing.shipping,
+                            fees: bestListing.fees,
+                          } satisfies TkcOfferLine,
+                        ]
+                      : []
+                }
+              />
+            </div>
           </div>
         ) : null}
 
@@ -315,10 +480,31 @@ export function ProductCard({
           dealReason?.trim() ||
           offerCount === 0) ? (
           <div className="product-card-meta">
-            {offerLabel ? (
+            {merchantLine ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {offerBreakdown.slice(0, 4).map((line) =>
+                  line.sourceId ? (
+                    <span
+                      key={line.sourceId}
+                      className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-border"
+                      title={line.sourceName}
+                    >
+                      <Image
+                        src={sourceImageFor(line.sourceId)}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 object-contain"
+                      />
+                    </span>
+                  ) : null,
+                )}
+                <p className="product-card-meta-line min-w-0">{merchantLine}</p>
+              </div>
+            ) : offerLabel ? (
               <p className="product-card-meta-line whitespace-nowrap">{offerLabel}</p>
             ) : null}
-            {sourceLabel ? (
+            {!merchantLine && sourceLabel ? (
               <p className="product-card-meta-line whitespace-nowrap">{sourceLabel}</p>
             ) : null}
             {hasFreshnessField && !showFreshnessWarning ? (
@@ -366,6 +552,9 @@ export function ProductCard({
             bestListing={bestListing}
             primaryCtaLabel={primaryCtaLabel}
             isSaved={isSaved}
+            alertActive={alertActive}
+            fromPrice={fromPrice ?? null}
+            offerCount={offerCount ?? null}
             signedIn={signedIn}
             redirectTo={saveRedirect}
           />
@@ -379,6 +568,7 @@ export function ProductCard({
             </Link>
           </div>
         )}
+        </div>
       </div>
     </article>
   );

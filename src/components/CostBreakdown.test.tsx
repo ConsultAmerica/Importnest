@@ -28,6 +28,7 @@ describe("CostBreakdown — missing shipping", () => {
     const html = renderToStaticMarkup(<CostBreakdown {...fullData} shipping={null} />);
     expect(html).toContain("Not provided");
     expect(html).toContain("Shipping");
+    expect(html).toContain("from $891.50, shipping not disclosed");
   });
 });
 

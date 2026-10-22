@@ -1,5 +1,5 @@
 // Schema mirrors the Business Data Dictionary in Importnest BRD Section 13.4.
-// Postgres via Supabase: DATABASE_URL (pooled) + DIRECT_URL (migrations).
+// Postgres via Neon: DATABASE_URL (pooled) + DIRECT_URL (migrations).
 
 generator client {
   provider = "prisma-client-js"
@@ -91,7 +91,7 @@ model Listing {
   url                String? // retailer product/offer page
   condition          String // new | open-box | used | refurbished | certified-refurbished
   price              Float
-  shipping           Float    @default(0)
+  shipping           Float? // null = undisclosed; 0 = seller disclosed free shipping
   fees               Float    @default(0)
   deliveryLabel      String?
   freshnessCapturedAt DateTime @default(now())
@@ -109,7 +109,7 @@ model PriceHistory {
   id         String   @id @default(cuid())
   listingId  String
   price      Float
-  shipping   Float    @default(0)
+  shipping   Float? // null = undisclosed; 0 = disclosed free shipping on that snapshot
   capturedAt DateTime @default(now())
 
   listing Listing @relation(fields: [listingId], references: [id])
@@ -144,6 +144,7 @@ model MatchReview {
 model AppUser {
   id        String   @id @default(cuid())
   email     String?  @unique
+  passwordHash String?
   authProvider String?
   isAdmin   Boolean  @default(false)
   createdAt DateTime @default(now())

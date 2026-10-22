@@ -1,3 +1,8 @@
+import {
+  isNormalizedOffer,
+  normalizeMerchantOffer,
+  toConnectorListing,
+} from "./normalize-merchant-feed";
 import type { ConnectorQuery, ConnectorResult, SourceConnector } from "./types";
 
 export const SOURCE_ID = "src-official";
@@ -26,25 +31,30 @@ type UpcItemDbResponse = {
   items?: UpcItemDbItem[];
 };
 
-function normalizeCondition(raw?: string): string {
-  const value = (raw ?? "").toLowerCase();
-  if (value.includes("used")) return "used";
-  return "new";
-}
-
-function parseShipping(raw?: string): number {
-  const match = raw?.replace(/,/g, "").match(/[\d.]+/);
-  return match ? Number(match[0]) : 0;
-}
-
-function safeUrl(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? raw : undefined;
-  } catch {
-    return undefined;
-  }
+/** Map one UPCItemDB offer through the shared normalization pipeline. */
+export function mapUpcItemDbOffer(
+  offer: UpcItemDbOffer,
+  item: UpcItemDbItem,
+  upc: string,
+): ReturnType<typeof toConnectorListing> | null {
+  const merchant = offer.merchant || offer.domain || "Unknown retailer";
+  const normalized = normalizeMerchantOffer({
+    offer_id: `${upc}-${merchant}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    merchant_id: SOURCE_ID,
+    merchant_name: merchant,
+    feed_type: "manufacturer_feed",
+    raw_price: offer.price ?? "invalid",
+    raw_shipping: offer.shipping ?? null,
+    raw_fees: 0,
+    delivery_speed: offer.availability,
+    condition: offer.condition,
+    url: offer.link,
+    upc,
+    mpn: item.model,
+    model_name: item.title,
+  });
+  if (!isNormalizedOffer(normalized)) return null;
+  return toConnectorListing(normalized);
 }
 
 export const upcItemDbConnector: SourceConnector = {
@@ -74,26 +84,12 @@ export const upcItemDbConnector: SourceConnector = {
       return { sourceId: SOURCE_ID, listings: [], fetchedAt };
     }
 
-    const item = data.items[0];
+    const item = data.items[0]!;
     const upc = item.upc ?? query.upc;
 
     const listings = (item.offers ?? [])
-      .filter((offer) => typeof offer.price === "number")
-      .map((offer) => ({
-        externalId: `${upc}-${offer.merchant ?? offer.domain ?? "offer"}`
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-"),
-        sellerName: offer.merchant || offer.domain,
-        url: safeUrl(offer.link),
-        condition: normalizeCondition(offer.condition),
-        price: Number(offer.price),
-        shipping: parseShipping(offer.shipping),
-        fees: 0,
-        deliveryLabel: offer.availability || undefined,
-        upc,
-        mpn: item.model,
-        modelName: item.title,
-      }));
+      .map((offer) => mapUpcItemDbOffer(offer, item, upc))
+      .filter((listing): listing is NonNullable<typeof listing> => listing != null);
 
     return { sourceId: SOURCE_ID, listings, fetchedAt };
   },

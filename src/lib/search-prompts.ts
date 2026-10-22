@@ -11,6 +11,13 @@ export const EXAMPLE_SEARCHES: ExampleSearch[] = [
   { label: "Best laptop for university", query: "Best laptop for university" },
 ];
 
+/** Empty-header suggestions. Each submits through the same natural-language search. */
+export const HEADER_PROMPT_PILLS: ExampleSearch[] = [
+  { label: "Best air purifiers under $250", query: "Best air purifiers under $250" },
+  { label: "Quiet bedroom humidifiers", query: "Quiet bedroom humidifiers" },
+  { label: "Running shoes with free shipping", query: "Running shoes with free shipping" },
+];
+
 export type QuickFilter = { id: string; label: string; href: string };
 
 /**

@@ -73,9 +73,9 @@ function frameClassFor(size: ProductImageProps["size"]) {
     case "result":
       return "result-product-image";
     case "summary":
-      return "relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl border border-border bg-[#F7FAFC] sm:h-36 sm:w-36";
+      return "relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl border border-border bg-transparent sm:h-36 sm:w-36";
     case "fill":
-      return "relative h-full w-full overflow-hidden bg-[#F7FAFC]";
+      return "relative h-full w-full overflow-hidden bg-transparent";
     case "card":
     default:
       return "product-card-image";

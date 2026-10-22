@@ -1,13 +1,22 @@
-import { syncAllConnectors } from "../src/lib/connectors/sync-all";
+import { syncAllConnectorsDetailed } from "../src/lib/connectors/sync-all";
 import { prisma } from "../src/lib/prisma";
 
 async function main() {
-  const results = await syncAllConnectors();
-  console.table(results);
+  const summary = await syncAllConnectorsDetailed();
+  console.table(
+    summary.metrics.map((m) => ({
+      sourceId: m.sourceId,
+      upserted: m.upserted,
+      errors: m.errorCount,
+      stale: m.staleListingCount,
+      ms: m.durationMs,
+    })),
+  );
+  console.log(`staleListingsTotal=${summary.staleListingsTotal}`);
 
-  const failed = results.filter((r) => r.error);
+  const failed = summary.metrics.filter((m) => m.errorCount > 0 && m.upserted === 0);
   if (failed.length > 0) {
-    console.error(`${failed.length}/${results.length} connector(s) failed`);
+    console.error(`${failed.length}/${summary.metrics.length} connector(s) failed`);
     process.exitCode = 1;
   }
 }

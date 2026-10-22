@@ -150,23 +150,22 @@ export default async function HomePage() {
     <PageShell width="wide">
       <div className="home-main">
         {/* Main search hero */}
-        <section className="home-band" aria-labelledby="home-search-heading">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,20rem)] lg:items-start lg:gap-6">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-accent">Importnest</p>
-              <h1
-                id="home-search-heading"
-                className="mt-1 max-w-xl text-2xl font-extrabold tracking-tight text-navy-900 sm:text-3xl"
-              >
-                Search once. Compare every approved offer.
+        <section className="home-band home-hero" aria-labelledby="home-search-heading">
+          <div className="home-hero-grid">
+            <div className="home-hero-copy">
+              <p className="home-hero-eyebrow">
+                <span aria-hidden="true">✦</span> AI shopping search · approved retailers only
+              </p>
+              <h1 id="home-search-heading" className="home-hero-title">
+                Search once. Compare every <span className="home-hero-title-accent">approved offer</span>.
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted sm:text-[0.95rem]">
-                Search approved retailers, then compare Total Known Cost — item + shipping + fees —
+              <p className="home-hero-lede">
+                See the real Total Known Cost — item + shipping + fees — across approved retailers
                 before you buy.
               </p>
-              <HeroSearch className="mt-4" showQuickFilters />
+              <HeroSearch className="mt-5" showQuickFilters variant="hero" />
             </div>
-            <div className="min-w-0 lg:pt-1">
+            <div className="home-hero-aside">
               <HomeTrustCard />
             </div>
           </div>

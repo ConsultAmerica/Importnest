@@ -22,7 +22,8 @@ import {
   totalKnownCost,
   type CompareFilters,
 } from "@/lib/compare-data";
-import { formatConditionLabel, formatMatchStatus } from "@/lib/compare-view";
+import { formatConditionLabel, formatMatchStatus, hasDisclosedShipping } from "@/lib/compare-view";
+import { compareBreadcrumbParts } from "@/lib/breadcrumbs";
 import { isPublicApprovedSource } from "@/lib/approved-sources";
 import { getRelatedProducts } from "@/lib/related-products";
 import type { Priority } from "@/lib/types";
@@ -183,9 +184,9 @@ export default async function ComparePage({
         retailerName: topListing.sourceName,
         condition: formatConditionLabel(topListing.condition),
         itemPrice: topListing.price,
-        shipping: topListing.shipping,
+        shipping: hasDisclosedShipping(topListing.shipping) ? topListing.shipping : undefined,
         fees: topListing.mandatoryFees,
-        totalKnownCost: totalKnownCost(topListing),
+        totalKnownCost: hasDisclosedShipping(topListing.shipping) ? totalKnownCost(topListing) : undefined,
       }
     : undefined;
 
@@ -197,9 +198,23 @@ export default async function ComparePage({
           <AddToCompareButton productId={productId} productName={product.modelName} labeled />
           <Link
             href={`/login?next=${encodeURIComponent(redirectTo)}`}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-link hover:underline"
+            className="btn-cta inline-flex min-h-11 items-center gap-2 px-4 py-2.5 text-sm font-semibold"
           >
-            Sign in to save or set a price alert
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 3a5 5 0 0 0-5 5v1.2c0 .7-.3 1.4-.8 1.9L5 12.5c-.6.7-.2 1.8.7 1.8h12.6c.9 0 1.3-1.1.7-1.8l-1.2-1.4c-.5-.5-.8-1.2-.8-1.9V8a5 5 0 0 0-5-5z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 16.5a2 2 0 0 0 4 0"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+            Sign in for price alerts
           </Link>
         </>
       ) : (
@@ -228,19 +243,25 @@ export default async function ComparePage({
         brandName={product.brand.name}
         imageSrc={productImage}
       />
-      <nav className="mb-3 text-xs text-muted">
-        <Link href="/" className="text-link hover:underline">
-          Home
-        </Link>
-        <span className="mx-1.5">›</span>
-        <Link
-          href={`/search?category=${product.category.slug}`}
-          className="text-link hover:underline"
-        >
-          {product.category.name}
-        </Link>
-        <span className="mx-1.5">›</span>
-        <span className="text-foreground">{product.modelName}</span>
+      <nav aria-label="Breadcrumb" className="mb-3 text-xs text-muted">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          {compareBreadcrumbParts({
+            categorySlug: product.category.slug,
+            categoryName: product.category.name,
+            productName: product.modelName,
+          }).map((part, i, trail) => (
+            <li key={`${part.label}-${i}`} className="inline-flex items-center gap-1.5">
+              {i > 0 ? <span aria-hidden="true">›</span> : null}
+              {part.href && i < trail.length - 1 ? (
+                <Link href={part.href} className="font-semibold text-link hover:underline">
+                  {part.label}
+                </Link>
+              ) : (
+                <span className="font-semibold text-navy-900">{part.label}</span>
+              )}
+            </li>
+          ))}
+        </ol>
       </nav>
 
       <ProductSummary
@@ -297,6 +318,9 @@ export default async function ComparePage({
                   priority={effectivePriority}
                   priorityOptions={priorityOptions}
                   panel={panel}
+                  signedIn={Boolean(authUser)}
+                  isSaved={Boolean(saveState?.isSaved)}
+                  redirectTo={redirectTo}
                 />
               </div>
             )}

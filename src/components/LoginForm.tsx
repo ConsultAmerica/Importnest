@@ -3,19 +3,28 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseBrowserConfigured } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/safe-redirect";
+
+function isAuthOffline(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /fetch|network|enotfound|failed to fetch|authretryable|timeout/i.test(message);
+}
 
 type Mode = "sign-in" | "sign-up";
 
-export function LoginForm() {
+export function LoginForm({ googleAvailable = true }: { googleAvailable?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/saved";
+  const nextPath = safeNextPath(searchParams.get("next"));
   const oauthError = searchParams.get("error") === "oauth";
+  // Env vars alone aren't enough — the server probes that the Supabase host is alive.
+  const supabaseReady = isSupabaseBrowserConfigured() && googleAvailable;
 
   const [mode, setMode] = useState<Mode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(
     oauthError ? "Google sign-in was cancelled or failed. Try again, or use email." : null,
   );
@@ -26,24 +35,71 @@ export function LoginForm() {
   async function onGoogleSignIn() {
     setError(null);
     setInfo(null);
+    if (!supabaseReady) {
+      setError("Google sign-in isn’t configured. Use email instead.");
+      return;
+    }
     setOauthLoading(true);
+    const timeout = window.setTimeout(() => {
+      setOauthLoading(false);
+      setError("Google sign-in is unavailable right now. Use email instead.");
+    }, 8000);
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-        nextPath.startsWith("/") ? nextPath : "/saved",
-      )}`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
       });
+      window.clearTimeout(timeout);
       if (oauthErr) {
-        setError(oauthErr.message);
+        setError(
+          isAuthOffline(oauthErr)
+            ? "Google sign-in is unavailable right now. Use email instead."
+            : oauthErr.message,
+        );
         setOauthLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      window.clearTimeout(timeout);
+      setError(
+        isAuthOffline(err)
+          ? "Google sign-in is unavailable right now. Use email instead."
+          : err instanceof Error
+            ? err.message
+            : "Google sign-in failed",
+      );
       setOauthLoading(false);
     }
+  }
+
+  /** Local email/password via Neon — works when Supabase is offline or misconfigured. */
+  async function signInWithEmail() {
+    const response = await fetch("/api/auth/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, mode }),
+    });
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (!response.ok) {
+      if (response.status === 409 && mode === "sign-up") {
+        // Account already exists — keep the typed email and flip to sign-in.
+        setMode("sign-in");
+        setPassword("");
+      }
+      setError(
+        body?.error ??
+          (response.status >= 500
+            ? "Sign-in is temporarily unavailable. Please try again in a moment."
+            : mode === "sign-up"
+              ? "Couldn’t create account."
+              : "Sign-in failed"),
+      );
+      return false;
+    }
+    router.replace(nextPath);
+    router.refresh();
+    return true;
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -53,29 +109,9 @@ export function LoginForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-
-      if (mode === "sign-up") {
-        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-        if (signUpError) {
-          setError(signUpError.message);
-          return;
-        }
-        if (!data.session) {
-          setInfo("Check your email to confirm your account, then sign in.");
-          setMode("sign-in");
-          return;
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          setError(signInError.message);
-          return;
-        }
-      }
-
-      router.replace(nextPath.startsWith("/") ? nextPath : "/saved");
-      router.refresh();
+      // Email/password always uses the local API. Browser Supabase signUp was
+      // throwing TypeError: Failed to fetch when NEXT_PUBLIC_SUPABASE_URL is dead.
+      await signInWithEmail();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
@@ -84,22 +120,26 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mt-6 max-w-md space-y-4 rounded-2xl border border-border bg-panel p-6 shadow-sm">
-      <button
-        type="button"
-        onClick={onGoogleSignIn}
-        disabled={oauthLoading || loading}
-        className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-surface disabled:opacity-60"
-      >
-        <GoogleGlyph />
-        {oauthLoading ? "Redirecting to Google…" : "Continue with Google"}
-      </button>
+    <div className="mt-6 space-y-4 rounded-2xl border border-border bg-panel p-6 shadow-sm">
+      {supabaseReady ? (
+        <>
+          <button
+            type="button"
+            onClick={onGoogleSignIn}
+            disabled={oauthLoading || loading || !supabaseReady}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-surface disabled:opacity-60"
+          >
+            <GoogleGlyph />
+            {oauthLoading ? "Redirecting to Google…" : "Continue with Google"}
+          </button>
 
-      <div className="flex items-center gap-3 text-xs text-muted">
-        <span className="h-px flex-1 bg-border" />
-        <span>or use email</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-border" />
+            <span>or use email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="flex gap-1 rounded-full bg-surface p-1 text-sm font-medium">
@@ -142,33 +182,59 @@ export function LoginForm() {
             type="email"
             autoComplete="email"
             required
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+            className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/40"
           />
         </div>
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-foreground">
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
+          <div className="relative mt-1">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+              required
+              minLength={6}
+              aria-describedby={mode === "sign-up" ? "password-hint" : undefined}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-border bg-white py-2.5 pl-3 pr-16 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/40"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+              aria-controls="password"
+              className="absolute inset-y-1 right-1 rounded-lg px-2.5 text-xs font-semibold text-link hover:bg-surface"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+          {mode === "sign-up" ? (
+            <p id="password-hint" className="mt-1 text-xs text-muted">
+              At least 6 characters.
+            </p>
+          ) : null}
         </div>
 
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        {info && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{info}</p>}
+        {error && (
+          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        {info && (
+          <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+            {info}
+          </p>
+        )}
 
         <button
           type="submit"
-          disabled={loading || oauthLoading}
+          disabled={loading}
           className="btn-cta w-full px-4 py-2.5 text-sm disabled:opacity-60"
         >
           {loading

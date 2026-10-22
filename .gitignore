@@ -44,3 +44,14 @@ next-env.d.ts
 prisma/dev.db
 
 .vercel
+
+# local tooling / generated artifacts
+.neon
+__pycache__/
+scripts/_shots/
+scripts/_plate-preview/
+scripts/_laptop-served.png
+scripts/.logo-aspects.txt
+
+# private docs (not for the public repo)
+*.docx

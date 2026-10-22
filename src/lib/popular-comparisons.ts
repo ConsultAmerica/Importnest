@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { minutesSince } from "@/lib/compare-view";
+import { minutesSince, knownOfferTotal } from "@/lib/compare-view";
 import { productImageFor } from "@/lib/product-images";
 
 export type PopularComparison = {
@@ -12,6 +12,8 @@ export type PopularComparison = {
   offerCount: number;
   /** Distinct approved retailers with a listing — never fabricated. */
   sourceCount: number;
+  /** Those retailer names, in listing order. */
+  sourceNames: string[];
   freshnessMinutesAgo: number;
   /** Real seeded average rating from CanonicalProduct.averageRating — never fabricated at render time. */
   rating: number | null;
@@ -22,7 +24,7 @@ export type PopularComparison = {
     sourceName: string;
     condition: string;
     price: number;
-    shipping: number;
+    shipping: number | null;
     fees: number;
   };
 };
@@ -91,7 +93,7 @@ async function getPopularComparisonsUnsafe(
   for (const listing of listings) {
     const id = listing.canonicalProductId;
     if (!id) continue;
-    const total = listing.price + listing.shipping + listing.fees;
+    const total = knownOfferTotal(listing.price, listing.shipping, listing.fees);
     const bestListing: PopularComparison["bestListing"] = {
       listingId: listing.id,
       sourceName: listing.source.name,
@@ -152,6 +154,7 @@ async function getPopularComparisonsUnsafe(
         lowestTotalCost: agg.lowestTotalCost,
         offerCount: agg.offerCount,
         sourceCount: agg.sourceNames.size,
+        sourceNames: [...agg.sourceNames],
         freshnessMinutesAgo: minutesSince(agg.freshestAt),
         rating: product.averageRating,
         isSaved: savedProductIds.has(id),

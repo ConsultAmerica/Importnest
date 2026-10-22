@@ -188,6 +188,7 @@ export const sourceImages: Record<string, string> = {
   "src-amazon": "/sources/brands/amazon.svg",
   "src-idealo": "/sources/brands/idealo.svg",
   "src-google-shopping": "/sources/brands/google-shopping.svg",
+  "src-ebay": "/sources/brands/ebay.svg",
 };
 
 export function sourceImageFor(sourceId: string) {

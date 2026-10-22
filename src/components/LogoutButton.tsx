@@ -13,11 +13,13 @@ export function LogoutButton({ variant = "default" }: { variant?: "default" | "c
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.replace("/login");
-      router.refresh();
-    } finally {
-      setLoading(false);
+    } catch {
+      // Hosted auth can be offline; the local session still needs to clear.
     }
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+    setLoading(false);
   }
 
   if (variant === "compact") {

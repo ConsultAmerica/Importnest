@@ -5,7 +5,7 @@ export const PRICE_HISTORY_WINDOW_DAYS = 30;
 
 export type PriceHistoryRawPoint = {
   price: number;
-  shipping: number;
+  shipping: number | null;
   capturedAt: Date;
 };
 
@@ -58,8 +58,9 @@ export function summarizePriceHistory(
   const valid = rows.filter(
     (r) =>
       Number.isFinite(r.price) &&
-      Number.isFinite(r.shipping) &&
       r.price >= 0 &&
+      r.shipping != null &&
+      Number.isFinite(r.shipping) &&
       r.shipping >= 0 &&
       r.capturedAt >= windowStart &&
       r.capturedAt <= now,
@@ -67,6 +68,7 @@ export function summarizePriceHistory(
 
   const byDay = new Map<string, number>();
   for (const row of valid) {
+    if (row.shipping == null) continue;
     const day = row.capturedAt.toISOString().slice(0, 10);
     const total = row.price + row.shipping;
     const existing = byDay.get(day);

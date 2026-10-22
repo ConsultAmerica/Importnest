@@ -17,7 +17,9 @@
     "sync:local-electronics": "npx tsx scripts/sync.ts src-local-electronics",
     "sync:authorized-outlet": "npx tsx scripts/sync.ts src-authorized-outlet",
     "sync:discount-home": "npx tsx scripts/sync.ts src-discount-home",
+    "sync:ebay": "npx tsx scripts/sync.ts src-ebay",
     "sync:all": "npx tsx scripts/sync-all.ts",
+    "sync:batch": "npx tsx scripts/batch-ingest.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

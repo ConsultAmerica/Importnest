@@ -1,10 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-  <!-- Apex Home Store: navy plate + teal home + lime accent -->
-  <rect width="48" height="48" rx="10" fill="#041935"/>
-  <path
-    d="M24 10.5 38 22.2h-4.2V36H14.2V22.2H10L24 10.5z"
-    fill="#00B8D4"
-  />
-  <rect x="20.2" y="26" width="7.6" height="10" rx="1.2" fill="#041935"/>
-  <path d="M13 37.5h22" stroke="#A4D037" stroke-width="2.4" stroke-linecap="round"/>
+  <rect width="48" height="48" rx="14" fill="#041935"/>
+  <path d="M24 8.5 40 21.2h-4.1v15.4c0 1-.8 1.8-1.8 1.8H13.9c-1 0-1.8-.8-1.8-1.8V21.2H8L24 8.5Z" fill="#12C6DC"/>
+  <path d="M20.2 27.4h7.6v11h-7.6z" fill="#041935"/>
+  <path d="M13.5 40.2h21" stroke="#C6E04A" stroke-width="2.4" stroke-linecap="round"/>
 </svg>

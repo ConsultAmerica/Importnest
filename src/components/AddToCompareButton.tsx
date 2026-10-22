@@ -74,7 +74,7 @@ export function AddToCompareButton({
         }`}
       >
         <CompareIcon checked={inBasket} />
-        {inBasket ? "In compare" : limitReached ? "Full" : "Compare"}
+        {inBasket ? "In compare cart" : limitReached ? "Full" : "Add to compare cart"}
       </button>
     );
   }
@@ -85,11 +85,13 @@ export function AddToCompareButton({
       onClick={handleClick}
       aria-label={ariaLabel}
       aria-pressed={inBasket}
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-panel/95 shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+      className={`flex h-auto min-h-9 min-w-[3.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-border bg-panel/95 px-1.5 py-1 text-[10px] font-semibold leading-tight shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
         inBasket ? "text-accent" : limitReached ? "text-muted" : "text-navy-900"
       }`}
     >
       <CompareIcon checked={inBasket} />
+      {/* "Added", not "In cart" — the compare list is separate from the real cart. */}
+      <span>{inBasket ? "Added" : "Compare"}</span>
     </button>
   );
 }

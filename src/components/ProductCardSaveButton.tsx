@@ -2,21 +2,35 @@ import Link from "next/link";
 import { saveProductAction, unsaveProductAction } from "@/lib/saved-actions";
 
 const ICON_BUTTON_CLASS =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-panel/95 shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex h-auto min-h-9 min-w-[3.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-border bg-panel/95 px-1.5 py-1 text-[10px] font-semibold leading-tight shadow-sm transition hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-/** Compact Save/heart toggle — sits in the product-card action row alongside Compare and Cart. */
+/**
+ * Save (heart) toggle — adds the product to Saved & alerts. Price alerts live on
+ * the separate bell (TrackPriceButton); this one only saves.
+ * - tile: legacy labelled tile
+ * - overlay: round icon on the product image (mobile cards)
+ * - inline: labelled utility button beside the primary CTA (desktop cards)
+ */
 export function ProductCardSaveButton({
   productId,
   isSaved,
   signedIn,
   redirectTo,
+  variant = "tile",
 }: {
   productId: string;
   isSaved: boolean;
   signedIn: boolean;
   redirectTo: string;
+  variant?: "tile" | "overlay" | "inline";
 }) {
-  const className = `${ICON_BUTTON_CLASS} ${isSaved ? "text-accent" : "text-navy-900"}`;
+  const className =
+    variant === "overlay"
+      ? `card-overlay-btn ${isSaved ? "is-active" : ""}`
+      : variant === "inline"
+        ? `card-inline-action ${isSaved ? "is-active" : ""}`
+        : `${ICON_BUTTON_CLASS} ${isSaved ? "text-accent" : "text-navy-900"}`;
+  const showLabel = variant !== "overlay";
 
   if (signedIn) {
     return (
@@ -35,6 +49,7 @@ export function ProductCardSaveButton({
           title={isSaved ? "Saved" : "Save"}
         >
           <HeartIcon filled={isSaved} />
+          {showLabel ? <span>{isSaved ? "Saved" : "Save"}</span> : null}
         </button>
       </form>
     );
@@ -44,10 +59,11 @@ export function ProductCardSaveButton({
     <Link
       href={`/login?next=${encodeURIComponent(redirectTo)}`}
       className={className}
-      aria-label="Sign in to save"
+      aria-label="Sign in to save this product"
       title="Save"
     >
       <HeartIcon filled={false} />
+      {showLabel ? <span>Save</span> : null}
     </Link>
   );
 }

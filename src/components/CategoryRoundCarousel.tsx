@@ -90,7 +90,11 @@ export function CategoryRoundCarousel({
   const active = (activeSubtype ?? "").trim().toLowerCase();
 
   return (
-    <section aria-labelledby={headingId} className={className ? `space-y-1 ${className}` : "space-y-1"}>
+    <section
+      id="browse-types"
+      aria-labelledby={headingId}
+      className={className ? `round-carousel-section space-y-1 ${className}` : "round-carousel-section space-y-1"}
+    >
       <div>
         <h2 id={headingId} className="text-lg font-bold tracking-tight text-navy-900 sm:text-xl">
           {headingText}
@@ -123,7 +127,7 @@ export function CategoryRoundCarousel({
                   <span className="round-category-image" data-mode={item.imageMode ?? "photo-cover"}>
                     <Image
                       src={item.imageUrl}
-                      alt={item.label}
+                      alt=""
                       width={116}
                       height={116}
                       unoptimized

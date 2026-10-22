@@ -196,17 +196,20 @@ describe("PriorityTabs — offer card, View offer visibility", () => {
     const rows = [makeRow({ id: "a", url: "https://example.com/offer" })];
     const html = renderPriorityTabs(rows);
 
-    expect(html).toContain("View retailer offer");
+    expect(html).toContain("View offer");
     expect(html).toContain('href="/go/a"');
-    expect(html).toContain("Why this option");
+    expect(html).toContain("Total Known Cost");
+    expect(html).toContain("Completeness:");
+    expect(html).toContain("More details");
   });
 
-  it("hides View offer (but keeps Why this option) when the listing has no valid URL", () => {
+  it("hides View offer when the listing has no valid URL", () => {
     const rows = [makeRow({ id: "a", url: undefined })];
     const html = renderPriorityTabs(rows);
 
-    expect(html).not.toContain("View offer");
-    expect(html).toContain("Why this option");
+    expect(html).not.toContain('href="/go/a"');
+    expect(html).toContain("Total Known Cost");
+    expect(html).toContain("More details");
   });
 });
 
@@ -274,19 +277,18 @@ describe("PriorityTabs — offer card, no delivery data", () => {
   });
 });
 
-describe("PriorityTabs — mobile ranking bottom sheet", () => {
-  it("shows a bottom-sheet trigger naming the active priority, alongside the unchanged desktop tablist", () => {
+describe("PriorityTabs — sticky horizontal sort chips", () => {
+  it("renders a scrollable chip tablist with the active priority selected", () => {
     const rows = [makeRow({ id: "a" })];
     const html = renderPriorityTabs(rows, { priority: "lowest-cost" });
 
-    // The mobile trigger names the current selection...
     expect(html).toContain(PRIORITY_LABELS["lowest-cost"]);
-    // ...and the desktop segmented tablist (unchanged) still lists every option.
     expect(html).toContain('role="tablist"');
-    expect(html).toContain("sm:inline-flex");
+    expect(html).toContain("priority-sort-chips");
+    expect(html).toContain('aria-selected="true"');
   });
 
-  it("keeps the sheet's dialog panel out of the DOM until opened (closed by default)", () => {
+  it("does not mount a sort dialog by default", () => {
     const rows = [makeRow({ id: "a" })];
     const html = renderPriorityTabs(rows);
     expect(html).not.toContain('role="dialog"');
@@ -310,13 +312,14 @@ describe("PriorityTabs — offer card, touch targets and overflow", () => {
   });
 });
 
-describe("PriorityTabs — offer card, collapsed source details on mobile", () => {
-  it("keeps the source-type text available, collapsed behind a details/summary on mobile, always visible on desktop", () => {
+describe("PriorityTabs — offer card, progressive disclosure", () => {
+  it("keeps source-type text available under More details", () => {
     const rows = [makeRow({ id: "a", sourceTypeLabel: "Affiliate feed" })];
     const html = renderPriorityTabs(rows);
 
     expect(html).toContain("Source details");
     expect(html).toContain("Affiliate feed");
+    expect(html).toContain("More details");
     expect(html).toContain("<details");
   });
 });

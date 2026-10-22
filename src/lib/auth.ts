@@ -1,14 +1,18 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { LOCAL_SESSION_COOKIE, readSession } from "@/lib/local-auth";
+
+export type SessionUser = { id: string; email?: string | null };
 
 /** Cheap session lookup — no DB write. Safe to call on every page render (e.g. Header). */
-export async function getAuthUser() {
+export async function getAuthUser(): Promise<SessionUser | null> {
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    return user;
+    if (user) return user;
   } catch (err) {
     // Next.js uses this throw to opt the route into dynamic rendering — must not swallow it.
     if (
@@ -20,6 +24,14 @@ export async function getAuthUser() {
     }
     // Auth outage / missing env must not take down layout shells (Header, home, etc.).
     console.error("[auth] getAuthUser failed", err);
+  }
+
+  try {
+    const jar = await cookies();
+    const local = readSession(jar.get(LOCAL_SESSION_COOKIE)?.value);
+    return local ? { id: local.id, email: local.email } : null;
+  } catch (err) {
+    console.error("[auth] local session unreadable", err);
     return null;
   }
 }

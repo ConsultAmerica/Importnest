@@ -1,70 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { BottomSheet } from "@/components/BottomSheet";
 import {
-  formatConditionLabel,
   isStaleFreshness,
   NO_RECOMMENDATION_TEXT,
-  totalKnownCost,
   type CompareRow,
   type RecommendationPanelModel,
 } from "@/lib/compare-view";
-import { CostBreakdown } from "@/components/CostBreakdown";
 import { Freshness } from "@/components/Freshness";
-import { OfferActions } from "@/components/OfferActions";
-import { ProtectionDetails } from "@/components/ProtectionDetails";
-import { BRAND_FALLBACK_IMAGE, sourceImageFor } from "@/lib/images";
+import { OfferCard } from "@/components/OfferCard";
 import type { Priority } from "@/lib/types";
 import { RefreshPricesButton } from "@/components/RefreshPricesButton";
 import { StatusBanner, StatusPanel, PrimaryAction, SecondaryAction } from "@/components/StatusPanel";
 import { formatFreshness, needsFreshnessWarning, freshnessWarningLabel } from "@/lib/freshness";
-
-/** Single pill style shared by every card badge — only the tone color varies. */
-function Badge({
-  tone,
-  children,
-}: {
-  tone: "top" | "authorized" | "neutral" | "fresh" | "stale" | "delivery";
-  children: React.ReactNode;
-}) {
-  const toneClass =
-    tone === "top"
-      ? "bg-cta/30 text-navy-900"
-      : tone === "authorized"
-        ? "bg-navy-100 text-navy-900"
-          : tone === "fresh"
-          ? "badge-savings"
-          : tone === "stale"
-            ? "bg-amber-100 text-amber-900"
-            : tone === "delivery"
-              ? "bg-violet-100 text-violet-900"
-              : "bg-surface text-muted";
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${toneClass}`}>
-      {children}
-    </span>
-  );
-}
-
-/** Fixed-width label column so values line up at the same position on every card. */
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  const empty =
-    children == null ||
-    children === "" ||
-    (typeof children === "string" && !children.trim());
-  return (
-    <div className="flex items-baseline gap-2 text-sm">
-      <span className="w-24 shrink-0 text-xs font-medium text-muted sm:w-28">{label}</span>
-      <span
-        className={`min-w-0 flex-1 text-foreground/85 ${empty ? "italic text-muted" : ""}`}
-      >
-        {empty ? "Not provided" : children}
-      </span>
-    </div>
-  );
-}
 
 function RecommendationPanel({
   model,
@@ -89,7 +37,9 @@ function RecommendationPanel({
         <div className="text-right">
           <p className="text-xs font-medium text-muted">Total known cost</p>
           <p className="text-xl price-text">
-            ${model.totalKnownCost.toFixed(2)}
+            {model.shippingDisclosed
+              ? `$${model.totalKnownCost.toFixed(2)}`
+              : `from $${model.totalKnownCost.toFixed(2)}, shipping not disclosed`}
           </p>
           <div className="mt-1">
             <Freshness minutesAgo={model.lastCheckedMinutesAgo} />
@@ -153,189 +103,6 @@ function RecommendationPanel({
   );
 }
 
-function OfferCard({
-  productId,
-  productName,
-  brandName,
-  productImageSrc,
-  row,
-  isTop,
-  recommendationLabel,
-}: {
-  productId: string;
-  productName: string;
-  brandName: string;
-  productImageSrc: string;
-  row: CompareRow;
-  isTop: boolean;
-  recommendationLabel: string;
-}) {
-  const { listing, recommendation } = row;
-  const total = totalKnownCost(listing);
-  const logoSrc = listing.hasDistinctSeller
-    ? BRAND_FALLBACK_IMAGE
-    : sourceImageFor(listing.sourceId);
-  const fulfillment = listing.pickupAvailable
-    ? listing.deliveryLabel !== "Delivery estimate unavailable"
-      ? listing.deliveryLabel
-      : "Pickup available"
-    : listing.deliveryLabel;
-  // Show a delivery/pickup badge by the merchant name only when the label is
-  // real — never fabricate a delivery estimate the source didn't provide.
-  const deliveryBadge =
-    fulfillment && fulfillment !== "Delivery estimate unavailable" ? fulfillment : null;
-
-  return (
-    <li
-      className={`offer-card rounded-2xl border bg-panel p-4 transition shadow-[var(--shadow-panel)] ${
-        isTop ? "border-accent ring-2 ring-accent/20" : "border-border hover:border-accent/40"
-      }`}
-    >
-      {/* Retailer or source, plus recommendation badge(s) */}
-      <div className="flex min-w-0 items-start gap-3">
-        <Image
-          src={logoSrc}
-          alt={`${listing.sourceName} logo`}
-          width={40}
-          height={40}
-          className="h-10 w-10 shrink-0 rounded-xl border border-border bg-white object-contain p-1"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3
-              className="truncate text-base font-semibold text-navy-900"
-              title={listing.sourceName}
-            >
-              {listing.sourceName}
-            </h3>
-            {isTop ? (
-              <Badge tone="top">{recommendationLabel}</Badge>
-            ) : null}
-            {deliveryBadge ? (
-              <Badge tone="delivery">
-                <span className="inline-flex items-center gap-1">
-                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path
-                      d="M1.5 4.5h7v6h-7z M8.5 6.5h3l2 2v2h-5z"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="4" cy="11.5" r="1.2" fill="currentColor" />
-                    <circle cx="11.5" cy="11.5" r="1.2" fill="currentColor" />
-                  </svg>
-                  {deliveryBadge}
-                </span>
-              </Badge>
-            ) : null}
-            {listing.isAuthorizedSource ? <Badge tone="authorized">Approved source</Badge> : null}
-            {(() => {
-              const minutes = listing.freshnessMinutesAgo;
-              if (needsFreshnessWarning(minutes)) {
-                return <Badge tone="stale">{freshnessWarningLabel(minutes)}</Badge>;
-              }
-              if (minutes != null && minutes < 15) {
-                return <Badge tone="fresh">Updated recently</Badge>;
-              }
-              if (minutes != null) {
-                return <Badge tone="neutral">{formatFreshness(minutes)}</Badge>;
-              }
-              return <Badge tone="neutral">Last checked unavailable</Badge>;
-            })()}
-          </div>
-          {listing.sourceTypeLabel ? (
-            <>
-              {/* Desktop/tablet: always visible, unchanged. */}
-              <p className="mt-0.5 hidden text-[11px] uppercase tracking-wide text-muted sm:block">
-                {listing.sourceTypeLabel}
-              </p>
-              {/* Mobile: collapsed by default to keep the card compact. */}
-              <details className="mt-0.5 sm:hidden">
-                <summary className="cursor-pointer text-[11px] font-medium text-muted">
-                  Source details
-                </summary>
-                <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">
-                  {listing.sourceTypeLabel}
-                </p>
-              </details>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Trust signals — Importnest is source-transparent */}
-      <ul className="offer-trust-strip mt-3" aria-label="Source confidence">
-        <li>
-          {listing.isAuthorizedSource ? (
-            <span className="offer-trust-pill offer-trust-pill-ok">Approved source</span>
-          ) : (
-            <span className="offer-trust-pill">Listed source</span>
-          )}
-        </li>
-        <li>
-          <span className="offer-trust-pill">{formatFreshness(listing.freshnessMinutesAgo)}</span>
-        </li>
-        <li>
-          <span className="offer-trust-pill">
-            {/affiliate/i.test(listing.sourceType) || /affiliate/i.test(listing.sourceTypeLabel)
-              ? "Affiliate link"
-              : listing.sourceTypeLabel || "Partner listing"}
-          </span>
-        </li>
-        <li>
-          <span className="offer-trust-pill offer-trust-pill-ok">Sponsored? No</span>
-        </li>
-      </ul>
-
-      {/* Condition · Total known cost · Delivery/pickup · Protection · Freshness, one order on every card */}
-      <div className="mt-3 space-y-2">
-        <FieldRow label="Condition">{formatConditionLabel(listing.condition)}</FieldRow>
-        <CostBreakdown
-          itemPrice={listing.price}
-          shipping={listing.shipping}
-          mandatoryFees={listing.mandatoryFees}
-          verifiedDiscount={
-            listing.verifiedDiscount != null && listing.verifiedDiscount > 0
-              ? listing.verifiedDiscount
-              : null
-          }
-          totalKnownCost={total}
-        />
-        <FieldRow label="Delivery / pickup">{fulfillment}</FieldRow>
-        <FieldRow label="Protection">
-          <ProtectionDetails details={listing.protectionDetails} />
-        </FieldRow>
-        <FieldRow label="Freshness">
-          <Freshness minutesAgo={listing.freshnessMinutesAgo} />
-        </FieldRow>
-      </div>
-
-      <OfferActions
-        product={{
-          productId,
-          productName,
-          brandName,
-          imageUrl: productImageSrc,
-        }}
-        listing={{
-          id: listing.id,
-          sourceName: listing.sourceName,
-          condition: listing.condition,
-          price: listing.price,
-          shipping: listing.shipping,
-          fees: listing.mandatoryFees,
-          url: listing.url,
-        }}
-        explanation={recommendation}
-        canAddToCart={Boolean(listing.id) && Boolean(listing.sourceName) && Number.isFinite(listing.price)}
-        canRefreshPrice={needsFreshnessWarning(listing.freshnessMinutesAgo)}
-        canViewRetailerOffer={Boolean(listing.url)}
-        canExplain={Boolean(recommendation)}
-      />
-    </li>
-  );
-}
-
 export function PriorityTabs({
   productId,
   productName,
@@ -345,6 +112,9 @@ export function PriorityTabs({
   priority,
   priorityOptions,
   panel,
+  signedIn = false,
+  isSaved = false,
+  redirectTo,
 }: {
   productId: string;
   productName: string;
@@ -353,14 +123,14 @@ export function PriorityTabs({
   /** Already ranked server-side for `priority` — this component never re-sorts. */
   rows: CompareRow[];
   priority: Priority;
-  /** Tabs to render — server-filtered (e.g. Best protection dropped when no listing has structured data), with a navigable href per option. */
+  /** Tabs to render — server-filtered, with a navigable href per option. */
   priorityOptions: { key: Priority; label: string; href: string }[];
-  /** Precomputed server-side from the same sorted `rows`; null means nothing to rank or a genuine tie for first. */
+  /** Precomputed server-side from the same sorted `rows`; null means nothing to rank or a genuine tie. */
   panel: RecommendationPanelModel | null;
+  signedIn?: boolean;
+  isSaved?: boolean;
+  redirectTo?: string;
 }) {
-  // No badge/highlight at all when there's no reliable recommendation (tie,
-  // or nothing to rank) — an arbitrary sort-order pick must never look like
-  // a confident claim.
   const topId = panel ? rows[0]?.listing.id : undefined;
   const recommendationLabel = panel?.label ?? "";
   const anyStale = rows.some((r) => isStaleFreshness(r.listing.freshnessMinutesAgo));
@@ -370,6 +140,7 @@ export function PriorityTabs({
     .filter((v): v is number => v != null);
   const oldestMinutes = knownAges.length > 0 ? Math.max(...knownAges) : null;
   const sourceCount = new Set(rows.map((r) => r.listing.sourceId)).size;
+  const saveRedirect = redirectTo ?? `/compare/${productId}`;
 
   if (rows.length === 0) {
     return (
@@ -389,7 +160,6 @@ export function PriorityTabs({
 
   return (
     <div>
-      {/* Soft freshness nudge — only when data is truly old */}
       {anyWarn ? (
         <StatusBanner
           tone="info"
@@ -411,74 +181,40 @@ export function PriorityTabs({
         </div>
       )}
 
-      {/* Priority controls — segment bar on desktop, bottom sheet on mobile.
-          Every option is a link to a pre-ranked URL; choosing one never
-          re-sorts in the browser, it navigates and the server returns the
-          new order. */}
-      <div className="mt-4 border-y border-border py-3">
+      {/* Sticky sort — horizontal chips on mobile (thumb-friendly), pill tablist on desktop. */}
+      <div className="priority-sort-sticky mt-4 border-y border-border bg-panel/95 py-2.5 backdrop-blur-sm sm:py-3">
         <span className="hidden text-sm font-semibold text-foreground sm:mr-3 sm:inline">
           Sort by
         </span>
-        <div className="sm:hidden">
-          <BottomSheet
-            title="Sort by"
-            description="Choose how offers are ranked. Press Escape to close."
-            label={
-              <span>
-                Sort by
-                <span aria-hidden> · {priorityOptions.find((o) => o.key === priority)?.label}</span>
-              </span>
-            }
-          >
-            <ul className="space-y-1">
-              {priorityOptions.map((option) => (
-                <li key={option.key}>
-                  <Link
-                    href={option.href}
-                    aria-current={priority === option.key ? "true" : undefined}
-                    className={`flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                      priority === option.key
-                        ? "bg-cta text-navy-900"
-                        : "text-navy-900 hover:bg-surface"
-                    }`}
-                  >
-                    {option.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </BottomSheet>
-      </div>
         <div
           role="tablist"
           aria-label="Sort priority"
-          className="mt-2 hidden rounded-full border border-border bg-surface p-1 sm:inline-flex sm:flex-wrap"
+          className="priority-sort-chips flex gap-2 overflow-x-auto pb-1 sm:mt-2 sm:inline-flex sm:flex-wrap sm:overflow-visible sm:rounded-full sm:border sm:border-border sm:bg-surface sm:p-1 sm:pb-1"
         >
           {priorityOptions.map((option) => (
-                    <Link
+            <Link
               key={option.key}
               href={option.href}
               role="tab"
               aria-selected={priority === option.key}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+              className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition sm:py-1.5 ${
                 priority === option.key
                   ? "bg-cta text-navy-900 shadow-sm"
-                  : "text-muted hover:bg-panel hover:text-foreground"
+                  : "border border-border bg-surface text-navy-900 hover:border-navy-800 sm:border-0 sm:bg-transparent sm:text-muted sm:hover:bg-panel sm:hover:text-foreground"
               }`}
             >
               {option.label}
-                    </Link>
+            </Link>
           ))}
-                  </div>
+        </div>
       </div>
 
-      {/* Offer cards */}
       <p className="mt-4 text-sm text-muted">
         {rows.length} {rows.length === 1 ? "offer" : "offers"} from {sourceCount}{" "}
         {sourceCount === 1 ? "source" : "sources"}
       </p>
 
-      <ul className="mt-3 space-y-3 pb-24 lg:pb-0">
+      <ul className="mt-3 space-y-3 pb-28 lg:pb-0">
         {rows.map((row) => (
           <OfferCard
             key={row.listing.id}
@@ -489,6 +225,9 @@ export function PriorityTabs({
             row={row}
             isTop={row.listing.id === topId}
             recommendationLabel={recommendationLabel}
+            signedIn={signedIn}
+            isSaved={isSaved}
+            redirectTo={saveRedirect}
           />
         ))}
       </ul>

@@ -105,9 +105,18 @@ export function CompareMobileStickyActions({
             href={viewOfferHref}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="btn-cta min-h-11 flex-1 px-3 py-2.5 text-center text-sm"
+            className="btn-cta offer-handoff-cta min-h-11 flex-1 gap-1.5 px-3 py-2.5 text-center text-sm"
           >
             View offer
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M6.5 3.5H3.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3M9.5 2.5h4v4M7 9l6.5-6.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </a>
         ) : null}
       </div>

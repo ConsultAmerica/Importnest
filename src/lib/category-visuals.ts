@@ -64,7 +64,7 @@ const CATEGORY_TITLES: Record<string, string> = {
   accessories: "Accessories",
   automotive: "Automotive",
   outdoors: "Outdoors",
-  home: "Home",
+  home: "Home & garden",
 };
 
 /** Slugs used in nav/DB that alias onto the visual key set above. */

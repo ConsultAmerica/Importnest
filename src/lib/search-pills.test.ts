@@ -13,6 +13,8 @@ describe("intentPillsFromQuery", () => {
       "Type: Dishwasher",
       "Delivery: This Week",
     ]);
+    expect(pills.every((p) => p.href.startsWith("/search/results?"))).toBe(true);
+    expect(pills[0]!.href).toContain("priceMax=900");
   });
 
   it("does not invent attributes that are not in the query", () => {

@@ -12,11 +12,13 @@ export function DealProductCard({
   imageSrc,
   signedIn,
   redirectTo = "/",
+  compactList = false,
 }: {
   item: BestDealItem;
   imageSrc: string;
   signedIn: boolean;
   redirectTo?: string;
+  compactList?: boolean;
 }) {
   const category = homepageDemoCategoryLabel(item.categorySlug);
   const badge =
@@ -37,6 +39,7 @@ export function DealProductCard({
       previousPrice={item.previousTotal}
       offerCount={item.offerCount}
       sourceCount={item.sourceCount}
+      sourceNames={item.sourceNames}
       freshnessMinutesAgo={item.freshnessMinutesAgo}
       categorySlug={item.categorySlug}
       bestListing={item.bestListing}
@@ -44,6 +47,7 @@ export function DealProductCard({
       signedIn={signedIn}
       redirectTo={redirectTo}
       dealReason={dealReason}
+      compactList={compactList}
     />
   );
 }

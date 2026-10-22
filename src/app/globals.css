@@ -6,6 +6,14 @@
   --foreground: #0b2748;
   --surface: #f3f4f6;
   --panel: #ffffff;
+  /* One side gutter for header, nav, page and footer so their edges line up.
+     16px floor on phones; grows to 32px on wide screens. */
+  --page-gutter: clamp(16px, 2vw, 32px);
+  /* Warm "skin" plate for category circles — same accent/15 mix as the active
+     sidebar department, so both stay in step (and follow dark mode via --panel). */
+  --tile-skin-center: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  --tile-skin: color-mix(in srgb, var(--accent) 15%, var(--panel));
+  --tile-skin-edge: color-mix(in srgb, var(--accent) 26%, var(--panel));
   --border: #e2e6ec;
   --navy-950: #04294d;
   --navy-900: #053f71;
@@ -111,7 +119,7 @@ video {
 }
 
 body {
-  background: var(--surface);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-space), ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.015em;
@@ -230,27 +238,27 @@ a {
 .home-container,
 .page-container {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1680px;
   margin: 0 auto;
-  padding-left: clamp(16px, 3vw, 32px);
-  padding-right: clamp(16px, 3vw, 32px);
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
+}
+
+/* Search / compare results — tighter column so cards don’t stretch ultrawide. */
+.page-container-results {
+  max-width: 1280px;
 }
 
 .header-top-inner {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1680px;
   margin: 0 auto;
-  padding: 14px 24px;
+  padding: 10px var(--page-gutter);
   display: grid;
-  /* A 520px hard floor left the search column unable to shrink below that,
-     which overflows this row well before 1440px — logo + location + actions
-     alone can leave under 400px free at ~1100-1300px viewports. 1fr still
-     expands to fill available space whenever there's room; this just lets
-     it shrink safely first. */
-  grid-template-columns: auto auto minmax(240px, 1fr) auto;
+  grid-template-columns: auto auto minmax(220px, 1fr) auto;
   align-items: center;
-  column-gap: 22px;
-  row-gap: 10px;
+  column-gap: clamp(12px, 1.4vw, 24px);
+  row-gap: 8px;
   overflow: visible;
 }
 
@@ -270,26 +278,32 @@ a {
   display: block;
   height: auto !important;
   width: auto !important;
-  max-height: 68px;
-  max-width: min(100%, 320px);
+  max-height: 76px !important;
+  max-width: min(100%, 480px);
   object-fit: contain;
   object-position: left center;
-  background: transparent;
+  background: transparent !important;
   image-rendering: auto;
+  overflow: visible;
 }
 
-/* Footer layout — same 1440px container as the header so the brand lockups
-   share one left edge instead of two independently-centered containers. */
+.footer-logo .header-logo-img,
+.footer-logo img {
+  max-height: 88px !important;
+  max-width: min(100%, 520px);
+}
+
+/* Footer layout — same shell as the header so brand lockups share one left edge. */
 .footer-inner {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1680px;
   margin: 0 auto;
-  padding: 48px clamp(16px, 3vw, 32px);
+  padding: 48px var(--page-gutter) 40px;
   display: grid;
-  grid-template-columns: minmax(240px, 360px) 1fr;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
   align-items: start;
-  column-gap: 56px;
-  row-gap: 40px;
+  column-gap: clamp(32px, 6vw, 96px);
+  row-gap: 36px;
 }
 
 /* Footer brand — keep full logo visible (no shrink/clip). */
@@ -302,20 +316,98 @@ a {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 0.85rem;
   text-align: left;
 }
 
 .footer-brand > p {
-  margin-left: 0;
-  padding-left: 0;
+  margin: 0;
+  padding: 0;
   max-width: 22rem;
   text-align: left;
 }
 
+/* Columns share the remaining width evenly — no dead gap between brand and links. */
 .footer-links {
   display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
-  gap: 32px 48px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: start;
+  gap: 32px clamp(24px, 3vw, 48px);
+  min-width: 0;
+}
+
+.footer-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-trust li {
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.75);
+}
+
+.footer-ask-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.footer-ask-ai .ask-ai-header-cta {
+  height: 40px;
+}
+
+.footer-ask-ai .ask-ai-header-cta-label {
+  display: inline;
+}
+
+.footer-bottom {
+  max-width: 1680px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem var(--page-gutter);
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  font-size: 0.75rem;
+  color: rgb(255 255 255 / 0.5);
+}
+
+.footer-bottom p {
+  margin: 0;
+}
+
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.footer-links > div {
+  min-width: 0;
+}
+
+.footer-links > div > p {
+  margin: 0;
+}
+
+.footer-links ul {
+  margin-top: 0.75rem;
 }
 
 .footer-logo.header-logo,
@@ -335,26 +427,41 @@ a.footer-logo {
   box-shadow: none !important;
 }
 
+
 @media (max-width: 900px) {
   .footer-inner {
     grid-template-columns: 1fr;
+    align-items: start;
     row-gap: 32px;
+  }
+
+  .footer-links {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .footer-inner {
-    padding: 40px 20px;
+    padding: 36px 16px 28px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 16px 5.5rem;
+  }
+
+  .footer-brand > p {
+    margin-inline-start: 0;
+    max-width: 22rem;
   }
 
   .footer-links {
-    grid-template-columns: 1fr;
-    gap: 28px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
   }
 }
 
-.footer-logo .header-logo-img,
-.footer-logo img,
 .footer-logo-img img {
   display: block;
   height: auto !important;
@@ -365,7 +472,6 @@ a.footer-logo {
   padding: 0;
   object-fit: contain;
   object-position: left center;
-  overflow: visible;
   background: transparent;
   border: 0 !important;
   border-radius: 0 !important;
@@ -375,9 +481,10 @@ a.footer-logo {
 
 .location-block {
   min-width: 145px;
-  max-width: 10.5rem;
-  line-height: 1.15;
+  max-width: 11rem;
+  line-height: 1.2;
   justify-self: start;
+  padding-inline: 2px 4px;
 }
 
 .header-search {
@@ -387,12 +494,68 @@ a.footer-logo {
   justify-self: stretch;
 }
 
+.header-search-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.header-search-row .search-shell {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ask-ai-header-cta {
+  display: inline-flex;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  /* Frosted white on navy. A translucent gold tint here mixed with the navy
+     header into a muddy olive-green, so the gold is kept for the icon only. */
+  border: 1.5px solid rgb(255 255 255 / 0.45);
+  background: rgb(255 255 255 / 0.1);
+  padding: 0 1rem;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ask-ai-header-cta svg {
+  color: var(--cta);
+  transition: color 140ms ease;
+}
+
+.ask-ai-header-cta:hover {
+  border-color: var(--cta);
+  background: var(--cta);
+  color: #0b2748;
+  box-shadow: 0 4px 14px rgb(242 176 30 / 0.28);
+}
+
+.ask-ai-header-cta:hover svg {
+  color: #0b2748;
+}
+
+.ask-ai-header-cta:focus-visible {
+  outline: 2px solid var(--cta);
+  outline-offset: 2px;
+}
+
 .search-shell {
   display: flex;
   width: 100%;
   min-width: 0;
   max-width: none;
-  height: 48px;
+  height: 50px;
   align-items: center;
   overflow: hidden;
   border-radius: 9999px;
@@ -425,20 +588,54 @@ a.footer-logo {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 18px;
+  gap: 6px;
   white-space: nowrap;
   justify-self: end;
   overflow: visible;
-  padding-top: 4px;
-  padding-right: 8px;
-  padding-bottom: 4px;
+  padding: 2px 0 2px 4px;
 }
 
 .page-shell {
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
-  background: #f3f6f9;
+  background: #ffffff;
+}
+
+/* Results: sidebar stretches to the same height as the product column. */
+.results-layout {
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .results-layout {
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  .results-layout > aside {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .results-layout > aside > .panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+}
+
+.results-layout-main {
+  min-width: 0;
+  width: 100%;
 }
 
 .home-section {
@@ -450,43 +647,283 @@ a.footer-logo {
 .home-band {
   width: 100%;
   margin: 0 0 56px;
-  padding: 28px 24px;
+  padding: 24px clamp(16px, 2vw, 28px);
   background: var(--section-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
+}
+
+.home-main {
+  width: 100%;
+}
+
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.5rem, 3vw, 2.75rem) clamp(16px, 2.5vw, 40px) 1.5rem;
+  background:
+    radial-gradient(60rem 22rem at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(40rem 18rem at 0% 100%, color-mix(in srgb, var(--link) 10%, transparent), transparent 70%),
+    var(--section-soft);
+}
+
+.home-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--foreground);
+}
+
+.home-hero-eyebrow > span {
+  color: var(--accent);
+}
+
+.home-hero-title {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--navy-900);
+}
+
+html.dark .home-hero-title {
+  color: var(--foreground);
+}
+
+/* Gold underline that follows the glyphs (and wraps cleanly) instead of a flat
+   marker bar that overhung the "a" and covered the descenders. */
+.home-hero-title-accent {
+  color: var(--navy-800);
+  text-decoration-line: underline;
+  text-decoration-color: var(--cta);
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.14em;
+  text-decoration-skip-ink: none;
+}
+
+html.dark .home-hero-title-accent {
+  color: var(--cta);
+}
+
+/* Brand-tinted text selection instead of the browser's flat grey. */
+::selection {
+  background: color-mix(in srgb, var(--cta) 38%, transparent);
+  color: inherit;
+}
+
+.home-hero-lede {
+  margin: 0.85rem 0 0;
+  max-width: 40rem;
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.075rem);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.hero-search-form {
+  max-width: 46rem;
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow: 0 12px 32px rgb(16 35 63 / 0.12);
+}
+
+.hero-search-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  max-width: 46rem;
+  margin: 0.6rem 0 0;
+  padding-inline: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.hero-ask-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-weight: 700;
+  color: var(--link);
+  transition: background-color 0.15s ease;
+}
+
+.hero-ask-ai svg {
+  color: var(--accent);
+}
+
+.hero-ask-ai:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.hero-ask-ai:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Label + chips on one line on wide screens; chips scroll sideways on phones
+   instead of stacking four rows deep above the fold. */
+.hero-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 46rem;
+  margin-top: 0.9rem;
+}
+
+.hero-chip-row > p {
+  flex: 0 0 5.5rem;
+  margin: 0;
+}
+
+.hero-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .hero-chip-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .hero-chip-row > p {
+    flex-basis: auto;
+  }
+
+  .hero-chip-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -16px;
+    padding: 2px 16px 4px;
+    scrollbar-width: none;
+  }
+
+  .hero-chip-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-chip-list > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+.home-hero-grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+  justify-items: stretch;
+}
+
+.home-hero-copy,
+.home-hero-aside {
+  min-width: 0;
+  width: 100%;
+}
+
+.home-hero-copy > h1,
+.home-hero-copy > p {
+  margin-inline: 0;
+  text-align: left;
+}
+
+.home-hero .ai-search-banner-hero {
+  margin-bottom: 0.55rem;
+}
+
+@media (min-width: 1024px) {
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(15.5rem, 18.5rem);
+    column-gap: 2rem;
+    align-items: stretch;
+  }
+
+  .home-hero-aside {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+
+  /* Card sizes to its content and centres against the taller search column. */
+  .home-hero-aside {
+    justify-content: center;
+  }
 }
 
 /* Idealo/Amazon-style responsive card grid — always fills the row width,
    never leaves a fixed-column dead zone on the right. */
 .section-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
   width: 100%;
+  gap: 20px;
+  /* auto-fit collapses unused tracks so 2–3 browse cards still span the
+     full content column instead of leaving an empty right gutter. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
 }
 
-@media (min-width: 640px) {
-  .section-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* Secondary picks: one scrollable row of fixed-width cards (snaps per card). */
+.comparison-tray {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(14.5rem, 16rem);
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 2px 2px 10px;
+  list-style: none;
+  margin-inline: 0;
 }
 
-@media (min-width: 1024px) {
-  .section-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.comparison-tray > li {
+  scroll-snap-align: start;
+  min-width: 0;
 }
 
-@media (min-width: 1280px) {
-  .section-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+.comparison-tray .product-card {
+  background: color-mix(in srgb, var(--surface) 60%, var(--panel));
 }
 
 @media (max-width: 639px) {
   .section-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.round-carousel-section {
+  width: 100%;
+  /* Clears the header when jumped to via #browse-types. */
+  scroll-margin-top: 1rem;
+  padding: 0.35rem 0 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Large rectangular product frames stay clear — blue plate is for circles only. */
+.product-photo-well {
+  background: transparent;
+}
+
+.product-photo-well .product-card-image {
+  background: transparent;
 }
 
 .section-soft {
@@ -548,8 +985,8 @@ a.footer-logo {
 .product-card-media {
   position: relative;
   display: block;
-  background: #f7fafc;
-  border-bottom: 1px solid #eef2f6;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
 }
 
 .product-card-media-wrap {
@@ -559,7 +996,7 @@ a.footer-logo {
 .product-card-media .product-card-image {
   border-radius: 0;
   aspect-ratio: 1 / 1;
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .product-card-image {
@@ -567,9 +1004,9 @@ a.footer-logo {
   width: 100%;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: #f7fafc;
+  background: transparent;
   border-radius: 14px;
-  padding: 12px;
+  padding: 10px;
 }
 
 .product-card-image img {
@@ -583,9 +1020,9 @@ a.footer-logo {
   height: 96px;
   flex-shrink: 0;
   overflow: hidden;
-  background: #f7fafc;
+  background: transparent;
   border-radius: 14px;
-  padding: 8px;
+  padding: 6px;
 }
 
 .compact-product-image img {
@@ -599,9 +1036,9 @@ a.footer-logo {
   height: 120px;
   flex-shrink: 0;
   overflow: hidden;
-  background: #f7fafc;
+  background: transparent;
   border-radius: 16px;
-  padding: 12px;
+  padding: 8px;
 }
 
 .result-product-image img {
@@ -702,6 +1139,299 @@ a.footer-logo {
   color: var(--muted);
 }
 
+.product-card-lowest-at {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.product-card-lowest-at-source {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.product-card-lowest-makeup {
+  margin: 0.05rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Desktop list rows: retailer totals always visible as a strip; the collapsed
+   peek stays for phones and narrow grid cards. */
+.product-card-tkc-strip {
+  display: none;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.product-card-tkc-strip > ol {
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.product-card-tkc-strip li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+}
+
+@media (min-width: 768px) {
+  .product-card-list .product-card-tkc-strip {
+    display: block;
+  }
+
+  .product-card-list .product-card-tkc-peek {
+    display: none;
+  }
+}
+
+/* Save / Track: round icons on the image corners on phones, inline beside the
+   CTA from 768px up. */
+.card-overlay-actions {
+  position: absolute;
+  inset: 0.5rem 0.5rem auto;
+  z-index: 11;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.card-overlay-actions > * {
+  pointer-events: auto;
+}
+
+.card-overlay-btn {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--navy-900);
+  box-shadow: 0 2px 8px rgb(15 42 74 / 0.12);
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.card-overlay-btn:hover,
+.card-overlay-btn:focus-visible {
+  border-color: var(--accent);
+}
+
+.card-overlay-btn.is-active,
+.card-inline-action.is-active {
+  color: var(--accent);
+}
+
+.card-desktop-actions {
+  display: none;
+}
+
+.card-inline-action {
+  display: inline-flex;
+  min-height: 2.25rem;
+  min-width: 3.25rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 1rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--navy-900);
+}
+
+.card-inline-action:hover {
+  background: var(--surface);
+}
+
+@media (min-width: 768px) {
+  .card-overlay-actions {
+    display: none;
+  }
+
+  .card-desktop-actions {
+    display: contents;
+  }
+}
+
+/* Price-alert sheet: bottom sheet on phones, centred dialog on desktop. */
+.track-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.track-sheet {
+  position: relative;
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: var(--panel);
+  padding: 0.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgb(15 42 74 / 0.22);
+  animation: results-sheet-up 220ms ease-out;
+}
+
+@media (min-width: 768px) {
+  .track-sheet-root {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .track-sheet {
+    width: min(26rem, calc(100vw - 2rem));
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+  }
+
+  .track-sheet .results-sheet-handle {
+    display: none;
+  }
+}
+
+.track-sheet-input {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0 0.85rem;
+  background: var(--panel);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.track-sheet-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.track-sheet-input input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.65rem 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.track-sheet-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--navy-900);
+  background: var(--panel);
+}
+
+.track-sheet-chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--tile-skin);
+}
+
+.track-sheet-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem 0 0.5rem;
+  text-align: center;
+}
+
+.track-sheet-check {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  animation: track-check-pop 260ms ease-out;
+}
+
+@keyframes track-check-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-sheet,
+  .track-sheet-check {
+    animation: none;
+  }
+}
+
+.product-card-tkc-peek {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.product-card-tkc-peek > summary {
+  cursor: pointer;
+  width: fit-content;
+  font-weight: 700;
+  color: var(--link);
+  list-style: none;
+}
+
+.product-card-tkc-peek > summary::-webkit-details-marker {
+  display: none;
+}
+
+.product-card-tkc-peek > summary::after {
+  content: " ▾";
+  font-size: 0.7em;
+}
+
+.product-card-tkc-peek[open] > summary::after {
+  content: " ▴";
+}
+
+.product-card-tkc-peek > ol {
+  margin: 0.35rem 0 0;
+  padding: 0.4rem 0.55rem;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.product-card-tkc-peek li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+  color: var(--foreground);
+}
+
+.product-card-tkc-peek li:first-child {
+  color: var(--navy-900);
+}
+
+.product-card-tkc-peek-note {
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .product-card-price-was {
   font-size: 0.75rem;
   color: var(--muted);
@@ -724,8 +1454,11 @@ a.footer-logo {
 }
 
 .product-card-tkc-info {
-  font-size: 10px;
-  opacity: 0.75;
+  margin-left: 0.2rem;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.85;
+  color: var(--link);
 }
 
 .product-card-tkc-breakdown {
@@ -733,6 +1466,33 @@ a.footer-logo {
   font-weight: 600;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.product-card-item-vs-tkc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.product-card-item-vs-tkc-item {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.product-card-item-vs-tkc-total {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.product-card-item-vs-tkc-delta {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .product-card-meta {
@@ -778,7 +1538,29 @@ a.footer-logo {
 /** Compact, always-visible icon row (Compare, Cart) above the primary CTA. */
 .product-card-actions-row {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+/* Secondary actions stay quiet so "Compare offers" is the one obvious next step:
+   no tile borders/shadows, just icon + label with a hover tint. State colours
+   (tracking / added) come from the components and are left alone. */
+.product-card-actions-row > button,
+.product-card-actions-row > a,
+.product-card-actions-row > form > button,
+.product-card-actions-row > form > a {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.product-card-actions-row > button:hover,
+.product-card-actions-row > a:hover,
+.product-card-actions-row > form > button:hover,
+.product-card-actions-row > form > a:hover {
+  border-color: transparent;
+  background: var(--surface);
 }
 
 .result-card-image,
@@ -788,7 +1570,7 @@ a.footer-logo {
   height: 120px;
   border-radius: 16px;
   overflow: hidden;
-  background: #f7fafc;
+  background: #e4ebf3;
   padding: 12px;
 }
 
@@ -868,9 +1650,9 @@ a.footer-logo {
 }
 
 .category-nav-inner {
-  max-width: 1440px;
+  max-width: 1680px;
   margin: 0 auto;
-  padding: 6px 20px;
+  padding: 8px var(--page-gutter);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1092,7 +1874,7 @@ a.footer-logo {
   width: 28px;
   height: 28px;
   border-radius: 9999px;
-  background: #f7fafc;
+  background: var(--tile-skin);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -1102,6 +1884,28 @@ a.footer-logo {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
+}
+
+/* Edge fades: tiles scroll under the arrows instead of being sliced beside them. */
+.round-carousel-wrap::before,
+.round-carousel-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 3.25rem;
+  pointer-events: none;
+}
+
+.round-carousel-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--background), transparent);
+}
+
+.round-carousel-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--background), transparent);
 }
 
 .round-category-carousel {
@@ -1142,10 +1946,11 @@ a.footer-logo {
   height: 116px;
   overflow: hidden;
   border-radius: 999px;
-  border: 1px solid rgba(0, 59, 104, 0.12);
-  /* Match baked tile fill (#EDE8E2) so letterboxing never flashes white */
-  background: #ede8e2;
-  box-shadow: 0 8px 18px rgba(0, 59, 104, 0.1);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  /* Warm skin plate; the image drop-shadow below keeps white earbuds/sneakers visible. */
+  background:
+    radial-gradient(circle at 50% 36%, var(--tile-skin-center) 0%, var(--tile-skin) 58%, var(--tile-skin-edge) 100%);
+  box-shadow: 0 4px 14px rgb(120 80 20 / 0.12);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
@@ -1157,12 +1962,23 @@ a.footer-logo {
 }
 
 /* Lifestyle / photo tiles fill the circle edge to edge. Transparent product
-   PNGs shrink to fit with padding so the product isn't cropped and no baked
-   white studio disc remains inside the frame. */
-.round-category-image[data-mode="lifestyle-cover"] img,
-.round-category-image[data-mode="photo-cover"] img {
+   PNGs shrink to fit with padding so the product isn't cropped. */
+.round-category-image[data-mode="photo-cover"] {
+  background:
+    radial-gradient(circle at 50% 36%, var(--tile-skin-center) 0%, var(--tile-skin) 58%, var(--tile-skin-edge) 100%);
+}
+
+.round-category-image[data-mode="lifestyle-cover"] img {
   object-fit: cover;
   object-position: center;
+}
+
+.round-category-image[data-mode="photo-cover"] img {
+  object-fit: contain;
+  object-position: center;
+  padding: 10px;
+  background: transparent;
+  filter: drop-shadow(0 4px 5px rgb(70 45 10 / 0.22));
 }
 
 .round-category-image[data-mode="transparent-contain"] img {
@@ -1182,6 +1998,18 @@ a.footer-logo {
   font-weight: 700;
   color: var(--foreground);
   line-height: 1.25;
+}
+
+.sparse-browse-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-card);
+  background: var(--tile-skin-center);
+  padding: 0.875rem 1.125rem;
 }
 
 .round-category-tile.active .round-category-image {
@@ -1239,6 +2067,146 @@ a.footer-logo {
 .carousel-arrow:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.approved-sources-strip {
+  width: 100%;
+  padding: 0.25rem 0 0.5rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.retailer-carousel {
+  position: relative;
+  margin-top: 0.35rem;
+}
+
+.retailer-track {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0.2rem 2.25rem 0.45rem;
+  list-style: none;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x;
+}
+
+.retailer-track::-webkit-scrollbar {
+  display: none;
+}
+
+.retailer-track.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+}
+
+.retailer-card {
+  flex: 0 0 13.5rem;
+  scroll-snap-align: start;
+}
+
+.retailer-icon {
+  position: relative;
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.retailer-icon::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent 0 68%, var(--accent) 100%);
+  animation: retailer-icon-spin 2.4s linear infinite;
+  z-index: 0;
+}
+
+.retailer-icon img {
+  position: relative;
+  z-index: 1;
+  border-radius: 9999px;
+  background: #fff;
+}
+
+.retailer-carousel:hover .retailer-icon::before,
+.retailer-track.is-dragging .retailer-icon::before {
+  animation-play-state: paused;
+}
+
+@keyframes retailer-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retailer-icon::before {
+    animation: none;
+  }
+}
+
+.retailer-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--foreground);
+  box-shadow: var(--shadow-panel);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.retailer-arrow:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--link);
+}
+
+.retailer-arrow.left {
+  left: 0;
+}
+
+.retailer-arrow.right {
+  right: 0;
+}
+
+.retailer-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .retailer-track {
+    padding-right: 0.15rem;
+    padding-left: 0.15rem;
+  }
+
+  .retailer-arrow {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1330,13 +2298,13 @@ a.footer-logo {
 
 @media (min-width: 1100px) {
   .header-top-inner {
-    grid-template-columns: auto auto minmax(240px, 1fr) auto;
-    column-gap: 22px;
-    padding: 14px 24px;
+    grid-template-columns: auto auto minmax(280px, 1fr) auto;
+    column-gap: clamp(14px, 1.5vw, 22px);
+    padding: 10px var(--page-gutter);
   }
 
   .header-actions {
-    gap: 18px;
+    gap: 4px;
   }
 
   .header-action {
@@ -1346,7 +2314,13 @@ a.footer-logo {
 
   .search-shell {
     height: 54px;
-    min-width: min(100%, 380px);
+    min-width: min(100%, 420px);
+  }
+
+  .ask-ai-header-cta {
+    height: 54px;
+    padding: 0 1.1rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -1374,7 +2348,7 @@ a.footer-logo {
        clipped the search input. A much lower floor lets the 1fr track
        shrink to fit; it still expands to fill available space otherwise. */
     grid-template-columns: auto minmax(140px, 1fr) auto;
-    padding: 12px 20px;
+    padding: 10px clamp(12px, 1.4vw, 20px);
   }
 
   .location-block {
@@ -1401,8 +2375,8 @@ a.footer-logo {
 
   .header-logo-img,
   .header-logo img {
-    max-height: 58px;
-    max-width: 280px;
+    max-height: 58px !important;
+    max-width: 340px;
   }
 }
 
@@ -1433,8 +2407,8 @@ a.footer-logo {
 
   .header-logo-img,
   .header-logo img {
-    max-height: 52px;
-    max-width: 250px;
+    max-height: 52px !important;
+    max-width: 300px;
   }
 
   .header-search {
@@ -1478,14 +2452,14 @@ a.footer-logo {
 @media (max-width: 400px) {
   .header-logo-img,
   .header-logo img {
-    max-height: 46px;
-    max-width: 210px;
+    max-height: 44px !important;
+    max-width: 240px;
   }
 
   .header-top-inner {
     column-gap: 8px;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .header-actions {
@@ -1535,6 +2509,50 @@ a.footer-logo {
   padding-left: 10px;
 }
 
+/* One row of suggestion pills that scrolls sideways — wrapping to a second
+   row made the header ~35px taller on laptops. */
+.header-search .search-intent-pills {
+  margin-top: 0.4rem;
+  padding-left: 0;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+
+.header-search .search-intent-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.header-search .search-intent-pills > li {
+  flex: 0 0 auto;
+}
+
+/* Narrow laptops / tablets: icon-only Ask AI so the search field keeps its width. */
+@media (min-width: 761px) and (max-width: 1023px) {
+  .ask-ai-header-cta-label {
+    display: none;
+  }
+
+  .ask-ai-header-cta {
+    width: 48px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .ask-ai-header-cta-label {
+    display: none;
+  }
+
+  .ask-ai-header-cta {
+    width: 48px;
+    padding: 0;
+  }
+}
+
 .search-intent-pills {
   display: flex;
   flex-wrap: wrap;
@@ -1554,6 +2572,21 @@ a.footer-logo {
   font-size: 11px;
   font-weight: 700;
   color: var(--foreground);
+  text-decoration: none;
+}
+
+.header-search .search-intent-pill {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 11px;
+  padding: 0.22rem 0.65rem;
+}
+
+.header-search .search-intent-pill:hover {
+  border-color: var(--cta);
+  background: color-mix(in srgb, var(--cta) 22%, transparent);
+  color: #fff;
 }
 
 /* —— Sticky comparison tray —— */
@@ -1572,8 +2605,9 @@ a.footer-logo {
 
 .compare-tray-inner {
   display: flex;
-  max-width: 1440px;
+  max-width: 1680px;
   margin: 0 auto;
+  padding-inline: clamp(12px, 1.4vw, 22px);
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -1635,14 +2669,274 @@ a.footer-logo {
 }
 
 /* —— Dev tools (hidden from consumer chrome) —— */
+.ask-ai-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.25rem;
+  z-index: 45;
+  display: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--cta) 45%, transparent);
+  background: var(--header-bg);
+  padding: 0;
+  color: #fff;
+  box-shadow: 0 4px 12px rgb(5 10 20 / 0.22);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.ask-ai-fab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgb(5 10 20 / 0.28);
+}
+
+.ask-ai-fab svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Compact circle FAB only on narrow phones (header Ask AI is hidden there). */
+@media (max-width: 520px) {
+  .ask-ai-fab {
+    display: inline-flex;
+  }
+
+  .ask-ai-header-cta {
+    display: none;
+  }
+}
+
+.ask-ai-panel {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 4.25rem;
+  z-index: 46;
+  display: flex;
+  width: min(100vw - 1.5rem, 24rem);
+  max-height: min(75vh, 36rem);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 12px 28px rgb(15 42 74 / 0.14);
+}
+
+.ask-ai-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+.ask-ai-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ask-ai-bubble {
+  max-width: 95%;
+  border-radius: 1rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.ask-ai-bubble-user {
+  align-self: flex-end;
+  background: var(--header-bg);
+  color: #fff;
+}
+
+.ask-ai-bubble-assistant {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.ask-ai-setup-hint {
+  border-radius: 0.65rem;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--surface) 80%, white);
+  padding: 0.45rem 0.55rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.ask-ai-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--navy-900, #0b2748);
+  transition: border-color 120ms ease;
+}
+
+.ask-ai-chip:hover {
+  border-color: var(--accent);
+}
+
+/* Question chips send a message (vs. link chips that navigate) — tinted so they read as tappable prompts. */
+.ask-ai-chip-question {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  text-align: left;
+  cursor: pointer;
+}
+
+.ask-ai-chip-question:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+.ask-ai-chip-question:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ask-ai-question-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.ask-ai-followups {
+  padding: 0 0.25rem;
+}
+
+.ask-ai-group-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ask-ai-more-toggle {
+  display: block;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding: 0.45rem 0.85rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--link);
+  background: var(--panel);
+}
+
+.ask-ai-more-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+.ask-ai-more-toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.ask-ai-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ask-ai-typing-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.ask-ai-typing-dots > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: ask-ai-dot 1s ease-in-out infinite;
+}
+
+.ask-ai-typing-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ask-ai-typing-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes ask-ai-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-ai-typing-dots > span {
+    animation: none;
+  }
+}
+
+.ask-ai-composer {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding: 0.75rem;
+  background: var(--panel);
+}
+
+.ask-ai-input {
+  min-width: 0;
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.ask-ai-input:focus {
+  outline: 2px solid var(--ring, var(--accent));
+  outline-offset: 1px;
+}
+
+@media (max-width: 640px) {
+  .ask-ai-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 4.5rem;
+    width: auto;
+  }
+}
+
 .dev-tools-fab {
   position: fixed;
   /* Bottom-right, clear of product-card action rows (Save/Compare/Cart start
      from each card's left edge, so a bottom-left FAB could sit right over
      the first grid card's icons). Height clears the full-width mobile
-     compare-tray / results bar (~50-70px), which sit at bottom:0. */
+     compare-tray / results bar (~50-70px), which sit at bottom:0.
+     Sits above the compact Ask AI circle on phones. */
   right: 0.75rem;
-  bottom: 5.5rem;
+  bottom: 4.25rem;
   z-index: 40;
   display: inline-flex;
   height: 2rem;
@@ -1695,13 +2989,21 @@ body:has(.compare-tray) {
 
 .product-card-list {
   display: grid;
-  grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
-  align-items: stretch;
+  width: 100%;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: start;
 }
 
 .product-card-list .product-card-media-wrap {
+  width: 100%;
   border-bottom: 0;
   border-right: 1px solid #eef2f6;
+}
+
+.product-card-list .product-card-media,
+.product-card-list .product-card-image {
+  width: 100%;
+  height: auto;
 }
 
 .product-card-list .product-card-media .product-card-image {
@@ -1711,6 +3013,60 @@ body:has(.compare-tray) {
 
 .product-card-list .product-card-body {
   padding: 0.75rem 1rem;
+}
+
+/* Phones: list rows stack like the grid card (image on top, full-width body)
+   instead of squeezing the details into a narrow column beside a thumbnail. */
+@media (max-width: 767px) {
+  .product-card-list {
+    grid-template-columns: 1fr;
+  }
+
+  .product-card-list .product-card-media-wrap {
+    border-right: 0;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  .product-card-list .product-card-media .product-card-image {
+    aspect-ratio: 4 / 3;
+    max-height: 15rem;
+  }
+}
+
+/* Grid cards keep the original single flex column; the wrappers only matter in list rows. */
+.product-card-info,
+.product-card-buy {
+  display: contents;
+}
+
+/* List rows (PriceRunner / Google Shopping style): image | details | price + actions.
+   Keeps the CTA a sensible width instead of stretching across the whole card. */
+@media (min-width: 768px) {
+  .product-card-list {
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+
+  .product-card-list .product-card-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 16rem);
+    column-gap: 1.5rem;
+    align-items: start;
+    padding: 1rem 1.25rem;
+  }
+
+  .product-card-list .product-card-info,
+  .product-card-list .product-card-buy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  .product-card-list .product-card-buy {
+    align-self: stretch;
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--border);
+  }
 }
 
 .results-toolbar-bar {
@@ -1754,10 +3110,146 @@ body:has(.compare-tray) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  padding: 0.65rem 0.85rem max(0.65rem, env(safe-area-inset-bottom));
+  padding: 0.5rem 0.85rem max(0.5rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 -8px 24px rgba(15, 42, 74, 0.12);
+  transition: transform 220ms ease;
+}
+
+/* Out of the way while scrolling down through products. */
+.mobile-results-bar.is-hidden {
+  transform: translateY(calc(100% + 8px));
+}
+
+/* Filters / Sort bottom sheets */
+.results-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.results-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(5 63 113 / 0.32);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: results-sheet-fade 180ms ease-out;
+}
+
+.results-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: var(--panel);
+  box-shadow: 0 -12px 40px rgb(15 42 74 / 0.22);
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: transform 200ms ease;
+  animation: results-sheet-up 220ms ease-out;
+}
+
+.results-sheet-tall {
+  height: 88vh;
+}
+
+.results-sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.5rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 1.25rem 1.25rem 0 0;
+  touch-action: none;
+}
+
+.results-sheet-handle {
+  display: block;
+  width: 2.5rem;
+  height: 0.3rem;
+  margin: 0 auto 0.6rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.results-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.results-sheet-reset {
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--link);
+}
+
+.results-sheet-reset:hover {
+  background: var(--surface);
+}
+
+.results-sheet-close {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--foreground);
+}
+
+.results-sheet-close:hover {
+  background: var(--surface);
+}
+
+@keyframes results-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes results-sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .results-sheet,
+  .results-sheet-backdrop {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-results-bar {
+    transition: none;
+  }
+}
+
+.mobile-results-bar-labels {
+  grid-column: 1 / -1;
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--navy-800, #14345c);
 }
 
 .mobile-results-bar-btn {
@@ -1775,6 +3267,92 @@ body:has(.compare-tray) {
 
 body:has(.compare-tray) .mobile-results-bar {
   bottom: 4.25rem;
+}
+
+.priority-sort-sticky {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 30;
+}
+
+@media (max-width: 1023px) {
+  .priority-sort-sticky {
+    top: 0;
+  }
+}
+
+.priority-sort-chips {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.priority-sort-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.offer-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.offer-card-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.offer-card-tkc-hero {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+  padding: 0.75rem 0.9rem;
+}
+
+.offer-card-tkc-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.offer-card-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offer-card-facts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.55rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--navy-900, #0b2748);
+}
+
+.offer-card-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.offer-handoff-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .results-toolbar-sticky {
@@ -1872,4 +3450,84 @@ body:has(.compare-tray) .mobile-results-bar {
   height: 0.9rem;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Browse-idea (demo) cards: explicit marker so they never read as live offers. */
+.demo-card-note {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--link);
+}
+
+/* Retailer rows in the card's Top 3 peek / strip: each row hands off to that offer. */
+.product-card-tkc-peek li,
+.product-card-tkc-strip li {
+  display: block;
+  padding: 0;
+}
+
+.tkc-row-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0 -0.3rem;
+  padding: 0.3rem;
+  border-radius: 0.45rem;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+a.tkc-row-link:hover,
+a.tkc-row-link:focus-visible {
+  background: var(--panel);
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.tkc-row-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.tkc-row-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.tkc-row-auth {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+}
+
+.tkc-row-drivers {
+  font-size: 0.66rem;
+  color: var(--muted);
+}
+
+.tkc-row-drivers strong {
+  color: var(--navy-800);
+}
+
+.tkc-row-total {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy-900);
+}
+
+a.tkc-row-link .tkc-row-total span {
+  color: var(--link);
 }

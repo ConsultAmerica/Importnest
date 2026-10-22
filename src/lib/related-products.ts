@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { minutesSince } from "@/lib/compare-view";
+import { minutesSince, knownOfferTotal } from "@/lib/compare-view";
 import { productImageFor } from "@/lib/product-images";
 import type { PopularComparison } from "@/lib/popular-comparisons";
 
@@ -65,7 +65,7 @@ async function getRelatedProductsUnsafe(
   for (const listing of listings) {
     const id = listing.canonicalProductId;
     if (!id) continue;
-    const total = listing.price + listing.shipping + listing.fees;
+    const total = knownOfferTotal(listing.price, listing.shipping, listing.fees);
     const bestListing: PopularComparison["bestListing"] = {
       listingId: listing.id,
       sourceName: listing.source.name,
@@ -126,6 +126,7 @@ async function getRelatedProductsUnsafe(
         lowestTotalCost: agg.lowestTotalCost,
         offerCount: agg.offerCount,
         sourceCount: agg.sourceNames.size,
+        sourceNames: [...agg.sourceNames],
         freshnessMinutesAgo: minutesSince(agg.freshestAt),
         rating: product.averageRating,
         isSaved: savedProductIds.has(id),
