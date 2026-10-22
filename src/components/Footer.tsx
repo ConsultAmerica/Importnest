@@ -30,6 +30,8 @@ const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] 
   },
 ];
 
+const TRUST_POINTS = ["Approved retailers only", "Sponsored results labeled", "No invented prices"];
+
 const LEGAL_LINKS = [
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
@@ -42,36 +44,37 @@ export function Footer() {
       <div className="footer-inner">
         <div className="footer-brand">
           <BrandLink onDark size="footer" className="footer-logo" />
-          <p className="text-sm leading-relaxed text-white/70">
+          <p className="footer-tagline">
             Compare the real Total Known Cost — item, shipping and fees — across approved
             retailers before you buy.
           </p>
           <ul className="footer-trust" aria-label="What we promise">
-            <li>Approved retailers only</li>
-            <li>Sponsored results labeled</li>
-            <li>No invented prices</li>
+            {TRUST_POINTS.map((point) => (
+              <li key={point}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+                {point}
+              </li>
+            ))}
           </ul>
           <div className="footer-ask-ai">
             <AskAiNavButton />
-            <span className="text-xs text-white/60">Questions about a product? Ask our assistant.</span>
+            <span>Questions about a product? Ask our assistant.</span>
           </div>
         </div>
-        <nav className="footer-links" aria-label="Footer">
-          {FOOTER_COLUMNS.map((col) => (
-            <div key={col.title}>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">{col.title}</p>
-              <ul className="space-y-2.5 text-sm text-white/80">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="transition hover:text-cta">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
+        {FOOTER_COLUMNS.map((col) => (
+          <nav key={col.title} className="footer-col" aria-label={col.title}>
+            <p className="footer-col-title">{col.title}</p>
+            <ul>
+              {col.links.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
       </div>
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Importnest · AI-powered shopping comparison</p>

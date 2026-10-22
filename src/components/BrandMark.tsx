@@ -21,6 +21,15 @@ const WORDMARK_LOCKUP = {
   aspect: 3.145,
 } as const;
 
+/** Same lockup cropped to its visible edges — lets the footer logo sit flush
+    with the text and column headings (the padded original sits ~8% inset). */
+const WORDMARK_LOCKUP_TRIM = {
+  src: "/brand/importnest-lockup-wordmark-v3-trim.png",
+  aspect: 5.461,
+} as const;
+
+const FOOTER_TRIM_LOGO_HEIGHT = 40;
+
 /**
  * Brand assets:
  * - header / headerDark — Concept B icon + importnest wordmark
@@ -210,8 +219,9 @@ export function BrandLink({
 }) {
   void logo;
   void onDark;
-  const height = size === "footer" ? FOOTER_LOGO_HEIGHT : HEADER_LOGO_HEIGHT;
-  const width = Math.round(height * WORDMARK_LOCKUP.aspect);
+  const lockup = size === "footer" ? WORDMARK_LOCKUP_TRIM : WORDMARK_LOCKUP;
+  const height = size === "footer" ? FOOTER_TRIM_LOGO_HEIGHT : HEADER_LOGO_HEIGHT;
+  const width = Math.round(height * lockup.aspect);
 
   return (
     <Link
@@ -220,11 +230,11 @@ export function BrandLink({
       aria-label="Importnest home"
     >
       <Image
-        src={WORDMARK_LOCKUP.src}
+        src={lockup.src}
         alt="Importnest"
         width={width}
         height={height}
-        className="header-logo-img"
+        className={size === "footer" ? "footer-logo-trim" : "header-logo-img"}
         priority
         quality={100}
         style={{ background: "transparent" }}
